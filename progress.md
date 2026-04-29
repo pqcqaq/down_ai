@@ -90,3 +90,29 @@
   - `npm run build`
   - `npm run frontend:build`
   - `npm run docs:build`
+- 测试加固迭代：
+  - 新增 `tests/fixtures/realistic-thesis`，包含中文/英文混合论文段落、引用、交叉引用、图表、公式和 BibTeX。
+  - 新增 `tests/helpers/pdf.ts`，使用 `pdfkit` 动态生成文本型报告 PDF。
+  - 新增 `tests/pdfParser.test.ts`，覆盖 PDF 报告解析。
+  - 新增 `tests/apiWorkflow.test.ts`，覆盖上传 PDF、创建任务、dry-run、事件/步骤、修订生成、approve、apply、rollback。
+  - 扩展 `tests/live/deepseekLive.test.ts`，真实调用 DeepSeek 测试普通生成和结构化修订。
+  - 发现 PDFKit 默认字体中文抽取不稳定，已将自动化 PDF 命中文本改为英文可抽取段落；中文乱码/扫描报告按 OCR 或人工输入兜底处理。
+- 测试加固验证：
+  - `npm run test`
+  - `npm run test:live`
+  - `npm run typecheck`
+  - `npm run build`
+  - `npm run frontend:build`
+  - `npm run docs:build`
+- 根据用户要求继续增加真实测试：
+  - 新增 `tests/realisticSkillRuntime.test.ts`，直接调用 `../BypassAIGC-Skill` 的项目审计、revision pack 生成和中文风格 lint 脚本，验证混合中英文 LaTeX fixture 能被真实工具链处理。
+  - 新增 `tests/revisionSafetyWorkflow.test.ts`，构造“已审批修订删除 `\cite` / `\ref` token”的危险场景，验证 apply 前被 `lint_revision_packet.py` 拦截，源 `.tex` 文件保持不变。
+  - 新增 `tests/live/deepseekWorkflowLive.test.ts`，真实调用 DeepSeek 跑一段 dry-run，并断言 `agent_runs` 记录模型、prompt hash、输入摘要和输出。
+  - 调整 `TaskOrchestrator` / `DeepSeekRevisionLlmClient`，让 live LLM 的 `agent_runs` 写入当前任务数据库句柄，便于任务级审计和测试隔离。
+- 继续验证通过：
+  - `npm run test`：9 个测试文件通过、2 个 live 文件默认跳过；10 个离线测试通过、3 个 live 测试跳过。
+  - `npm run test:live`：真实 DeepSeek 2 个测试文件通过，3 个 live 用例通过。
+  - `npm run typecheck`
+  - `npm run build`
+  - `npm run frontend:build`
+  - `npm run docs:build`

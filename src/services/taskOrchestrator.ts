@@ -10,7 +10,7 @@ import { ArtifactStore } from "../storage/artifactStore.js";
 import type { DatabaseHandle } from "../storage/db.js";
 import { getDatabase } from "../storage/db.js";
 import { SkillRuntime } from "../tools/skillRuntime.js";
-import { createRevisionLlmClient } from "./llmClient.js";
+import { createRevisionLlmClient, type RevisionLlmClient } from "./llmClient.js";
 import { ReportFileService } from "./reportFileService.js";
 import { TaskProgressService } from "./taskProgressService.js";
 import { validateRevisionText } from "./revisionValidator.js";
@@ -50,13 +50,14 @@ export class TaskOrchestrator {
   private readonly artifactStore: ArtifactStore;
   private readonly reportFileService: ReportFileService;
   private readonly parserRegistry = new ParserRegistry();
-  private readonly llmClient = createRevisionLlmClient();
+  private readonly llmClient: RevisionLlmClient;
 
   constructor(private readonly handle: DatabaseHandle = getDatabase()) {
     this.progress = new TaskProgressService(handle);
     this.skillRuntime = new SkillRuntime(handle);
     this.artifactStore = new ArtifactStore(handle);
     this.reportFileService = new ReportFileService(handle);
+    this.llmClient = createRevisionLlmClient(handle);
   }
 
   async runDryRun(taskId: string): Promise<void> {

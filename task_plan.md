@@ -25,6 +25,8 @@
 | 9 | complete | Iteration 1：后端核心闭环实现 |
 | 10 | complete | Iteration 2：前端工作台、写回和回滚 |
 | 11 | complete | Iteration 3：真实 API 测试开关和任务恢复能力 |
+| 12 | complete | 测试加固：真实场景 fixture、PDF 解析、API E2E、DeepSeek live 覆盖 |
+| 13 | complete | 测试加固补充：真实 SkillRuntime 集成、危险写回拦截、live dry-run 数据库审计 |
 
 ## 已知决策
 

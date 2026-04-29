@@ -1,9 +1,17 @@
 import { describe, expect, it } from "vitest";
+import { generateContent } from "../../src/services/deepseekClient.js";
 import { DeepSeekRevisionLlmClient } from "../../src/services/llmClient.js";
 
 const shouldRun = process.env.RUN_LIVE_LLM_TESTS === "true" && Boolean(process.env.DEEPSEEK_API_KEY);
 
 describe.skipIf(!shouldRun)("DeepSeek live API", () => {
+  it("generates final content without exposed reasoning text", async () => {
+    const content = await generateContent("请将这句话改得更清晰：本文设计了系统，并完成了实现。");
+
+    expect(content.length).toBeGreaterThan(0);
+    expect(content).not.toMatch(/<think>|<\/think>|reasoning_content|思考过程|推理过程/i);
+  });
+
   it("returns a structured revision decision without drifting protected tokens", async () => {
     const client = new DeepSeekRevisionLlmClient();
     const decision = await client.generateRevisionDecision({

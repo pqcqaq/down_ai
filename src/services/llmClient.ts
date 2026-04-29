@@ -3,6 +3,7 @@ import { revisionDecisionSchema, type RevisionDecision } from "../domain/schemas
 import type { TaskStepKey } from "../domain/taskSteps.js";
 import { stripReasoningContent } from "./deepseekClient.js";
 import { AgentRunRecorder } from "./agentRunRecorder.js";
+import type { DatabaseHandle } from "../storage/db.js";
 
 type GenerateRevisionInput = {
   taskId?: string;
@@ -25,6 +26,9 @@ export class MockRevisionLlmClient implements RevisionLlmClient {
       .replace(/最后/g, "随后")
       .replace(/该过程/g, "这一过程")
       .replace(/具有重要意义/g, "为后续分析提供了更明确的依据")
+      .replace(/This study aims to provide a comprehensive analysis of/g, "This study examines")
+      .replace(/plays an important role in improving/g, "is evaluated through its effect on")
+      .replace(/provides a complete solution for/g, "supports")
       .trim();
 
     return revisionDecisionSchema.parse({
@@ -39,7 +43,11 @@ export class MockRevisionLlmClient implements RevisionLlmClient {
 }
 
 export class DeepSeekRevisionLlmClient implements RevisionLlmClient {
-  private readonly recorder = new AgentRunRecorder();
+  private readonly recorder: AgentRunRecorder;
+
+  constructor(handle?: DatabaseHandle) {
+    this.recorder = new AgentRunRecorder(handle);
+  }
 
   async generateRevisionDecision(input: GenerateRevisionInput): Promise<RevisionDecision> {
     if (!env.deepseekApiKey) {
@@ -132,6 +140,6 @@ export class DeepSeekRevisionLlmClient implements RevisionLlmClient {
   }
 }
 
-export function createRevisionLlmClient(): RevisionLlmClient {
-  return env.useLiveLlm ? new DeepSeekRevisionLlmClient() : new MockRevisionLlmClient();
+export function createRevisionLlmClient(handle?: DatabaseHandle): RevisionLlmClient {
+  return env.useLiveLlm ? new DeepSeekRevisionLlmClient(handle) : new MockRevisionLlmClient();
 }

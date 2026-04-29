@@ -77,6 +77,10 @@
 - 编译日志错误提取。
 - 解析结果写入 `parsed_documents` 和 `parsed_text_blocks`。
 
+当前已加入动态 PDF fixture：测试使用 `pdfkit` 生成文本型报告 PDF，再由 `pdf-parse` 解析，避免提交二进制测试文件。需要注意的是，PDFKit 默认字体对中文文本抽取不稳定，中文扫描或乱码报告应走 OCR 或人工输入兜底；自动化测试中的 PDF 命中文本使用英文可抽取段落，LaTeX 项目仍保留中文和英文混合内容。
+
+当前已加入真实 LaTeX 工具链集成测试：`tests/realisticSkillRuntime.test.ts` 使用混合中文/英文、引用、交叉引用、图表、公式和 BibTeX 的 synthetic thesis fixture，直接调用 `../BypassAIGC-Skill` 的审计、revision pack 和中文风格 lint 脚本，并断言工具调用记录落库。
+
 ### Revision 测试
 
 必须覆盖：
@@ -86,6 +90,8 @@
 - 长度变化超过阈值进入人工确认。
 - 低置信度 finding match 不自动应用。
 - apply journal 可回滚。
+
+当前已加入危险写回测试：`tests/revisionSafetyWorkflow.test.ts` 人为构造已审批修订删除 LaTeX protected token 的场景，验证 apply 前被 `lint_revision_packet.py` 拦截，`tool_runs` 记录失败，源 `.tex` 文件不被修改。
 
 ## Live LLM API 测试
 
@@ -138,6 +144,8 @@ DEEPSEEK_MODEL=deepseek-v4-pro
 - 不返回给用户 `reasoning_content`。
 - 响应耗时记录到 `agent_runs`。
 
+当前 live 测试已覆盖 `generateContent()`，确认真实 DeepSeek 响应非空，且不会把 `<think>`、`reasoning_content`、“思考过程”等内容暴露给用户。
+
 #### 2. JSON 结构化输出测试
 
 目标：确认模型能按 schema 返回 `RevisionDecision`。
@@ -183,6 +191,10 @@ DEEPSEEK_MODEL=deepseek-v4-pro
 - `\ref{fig:arch}` 保留。
 - 不新增引用 key。
 - 不新增实验事实。
+
+当前 live 测试已覆盖真实结构化修订：模型返回 `RevisionDecision`，并校验 `\cite{smith2024}` 和 `\ref{fig:arch}` 保留。
+
+当前 live 测试还覆盖完整一段 dry-run：`tests/live/deepseekWorkflowLive.test.ts` 使用 synthetic thesis fixture 真实调用 DeepSeek，并验证任务完成、修订记录生成、`agent_runs` 中保存模型名、prompt hash、输入摘要和结构化输出，且不保存完整论文片段作为输入摘要。
 
 #### 5. 错误处理测试
 

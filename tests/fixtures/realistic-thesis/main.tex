@@ -1,0 +1,49 @@
+\documentclass[UTF8]{ctexart}
+\usepackage{graphicx}
+\usepackage{amsmath}
+
+\title{面向论文修订任务的智能代理系统设计}
+\author{测试作者}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+本文围绕论文修订任务设计并实现了一个智能代理系统。该系统通过任务状态记录、报告解析、段落匹配和模型改写等模块，形成了一套完整的处理流程，能够有效提升论文处理效率，具有重要的应用意义。
+\end{abstract}
+
+\section{引言}
+\label{sec:introduction}
+
+随着大语言模型在论文写作和技术报告整理中的应用不断增多，如何对已有文本进行审慎修订成为一个实际问题。本文设计了一个用于 LaTeX 项目的自动化修订流程，并通过数据库记录所有步骤和进度，从而实现较为完整的任务管理能力。
+
+这种渐进式实现方式符合毕业设计周期，也能降低单点失败风险。系统首先解析用户提供的报告文件，然后定位 LaTeX 项目中的相关段落，最后生成可审查的修订建议。
+
+This study aims to provide a comprehensive analysis of the proposed revision workflow. The workflow plays an important role in improving document quality and provides a complete solution for academic writing scenarios.
+
+\section{系统设计}
+\label{sec:design}
+
+如图 \ref{fig:pipeline} 所示，系统由报告解析、项目审计、段落匹配、修订生成和结果校验五个部分构成。与普通文本处理流程不同，本系统需要保留 LaTeX 命令、引用和交叉引用，例如 \cite{smith2024,lee2025}。
+
+\begin{figure}[htbp]
+  \centering
+  \fbox{\rule{0pt}{4cm}\rule{8cm}{0pt}}
+  \caption{论文修订任务处理流程}
+  \label{fig:pipeline}
+\end{figure}
+
+\section{方法}
+\label{sec:method}
+
+系统将每个任务表示为一个状态机。设任务集合为 $T=\{t_1,t_2,\ldots,t_n\}$，每个任务都包含输入校验、项目审计、报告解析、修订生成和结果验证等阶段。该设计可以为后续功能扩展提供支撑，并能够形成较为完善的闭环。
+
+\section{结论}
+\label{sec:conclusion}
+
+本文完成了一个面向 LaTeX 项目的论文修订代理系统。实验结果表明，该系统能够对报告中的疑似问题进行定位，并生成可人工审查的修订建议。
+
+\bibliographystyle{plain}
+\bibliography{refs}
+
+\end{document}
