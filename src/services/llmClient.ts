@@ -21,6 +21,9 @@ export class MockRevisionLlmClient implements RevisionLlmClient {
     const revisedText = input.originalText
       .replace(/本文/g, "本研究")
       .replace(/进行了/g, "完成了")
+      .replace(/系统首先/g, "流程首先")
+      .replace(/最后/g, "随后")
+      .replace(/该过程/g, "这一过程")
       .replace(/具有重要意义/g, "为后续分析提供了更明确的依据")
       .trim();
 

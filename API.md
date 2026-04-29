@@ -260,3 +260,52 @@ curl -X POST http://localhost:3000/api/generate \
 ### `GET /api/tasks/:taskId/revisions`
 
 查询 dry-run 生成的修订草稿。
+
+### `POST /api/tasks/:taskId/revisions/:revisionId/approve`
+
+确认某条修订可写回。
+
+### `POST /api/tasks/:taskId/revisions/:revisionId/reject`
+
+拒绝某条修订。
+
+### `POST /api/tasks/:taskId/revisions/:revisionId/edit`
+
+人工编辑某条修订。
+
+```json
+{
+  "revisedText": "人工确认后的 LaTeX 文本"
+}
+```
+
+### `POST /api/tasks/:taskId/revisions/:revisionId/regenerate`
+
+重新生成某条修订。默认 mock LLM，`USE_LIVE_LLM=true` 时真实调用 DeepSeek。
+
+### `POST /api/tasks/:taskId/apply`
+
+应用所有已确认且有 `revisedText` 的修订。服务会：
+
+1. 生成 apply packet。
+2. 运行 `lint_revision_packet.py`。
+3. 创建原文件备份。
+4. 运行 `apply_segment_revisions.py`。
+5. 写入原 `.tex` 文件。
+6. 生成 patch 和 apply journal。
+
+### `POST /api/tasks/:taskId/rollback`
+
+按 apply journal 回滚本任务写回的文件。回滚前会检查当前文件 hash，避免覆盖用户后续手动修改。
+
+## 前端工作台
+
+Iteration 2 新增 Vite + React 前端子项目：
+
+```bash
+npm run frontend:dev
+npm run frontend:build
+npm run frontend:preview
+```
+
+前端默认通过 Vite proxy 访问 `http://localhost:3000` 的后端 API。

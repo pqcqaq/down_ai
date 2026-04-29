@@ -3,6 +3,7 @@ dist/
 docs/node_modules/
 docs/.vitepress/cache/
 docs/.vitepress/dist/
+frontend/dist/
 .down-ai/
 .env
 .DS_Store

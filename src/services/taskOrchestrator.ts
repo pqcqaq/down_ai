@@ -256,8 +256,8 @@ export class TaskOrchestrator {
     const stored: StoredSegment[] = [];
     const stmt = this.handle.sqlite.prepare(
       `INSERT INTO latex_segments
-        (id, task_id, file_path, line_start, line_end, section_path_json, text, normalized_text, text_hash, protected_tokens_json)
-        VALUES (@id, @taskId, @filePath, @lineStart, @lineEnd, @sectionPathJson, @text, @normalizedText, @textHash, @protectedTokensJson)`,
+        (id, task_id, file_path, packet_index, line_start, line_end, section_path_json, text, normalized_text, text_hash, protected_tokens_json)
+        VALUES (@id, @taskId, @filePath, @packetIndex, @lineStart, @lineEnd, @sectionPathJson, @text, @normalizedText, @textHash, @protectedTokensJson)`,
     );
     const tx = this.handle.sqlite.transaction(() => {
       for (const segment of segments) {
@@ -268,6 +268,7 @@ export class TaskOrchestrator {
           id,
           taskId,
           filePath: path.resolve(sourceFile),
+          packetIndex: segment.index,
           lineStart: segment.line_start,
           lineEnd: segment.line_end,
           sectionPathJson: stringifyJson(segment.section_hint ? [segment.section_hint] : []),

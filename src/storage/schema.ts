@@ -100,6 +100,7 @@ export const latexSegments = sqliteTable(
     id: text("id").primaryKey(),
     taskId: text("task_id").notNull(),
     filePath: text("file_path").notNull(),
+    packetIndex: integer("packet_index"),
     lineStart: integer("line_start").notNull(),
     lineEnd: integer("line_end").notNull(),
     sectionPathJson: text("section_path_json").notNull(),

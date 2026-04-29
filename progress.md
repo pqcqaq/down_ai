@@ -62,3 +62,18 @@
   - `npm run typecheck`
   - `npm run build`
   - 编译后 Express API dry-run：创建任务、启动任务、生成 revision draft。
+- Iteration 1 已提交：`611da45 feat: implement iteration 1 dry-run backend`。
+- Iteration 2 已开始实现：
+  - 新增 `RevisionApplyService`，支持 approve/reject/edit/apply/rollback。
+  - 新增 `packet_index` 迁移字段，用于 revision packet 写回定位。
+  - 新增 `apply_segment_revisions.py` 封装。
+  - 新增写回/回滚 API。
+  - 新增 Vite + React 前端工作台。
+  - 新增 `frontend:dev`、`frontend:build`、`frontend:preview` 脚本。
+  - 新增写回/回滚集成测试。
+- Iteration 2 已验证：
+  - `npm run frontend:build`
+  - `npm run test`
+  - `npm run typecheck`
+  - `npm run build`
+  - 编译后 Express API 写回/回滚 smoke test。

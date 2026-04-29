@@ -22,7 +22,8 @@
 | 6 | complete | 检查文档结构并输出总结 |
 | 7 | complete | 复核架构与技术可行性，修正 DeepSeek/LangChain/数据库/解析层落地方案 |
 | 8 | complete | 将开发计划收敛为 2-3 次迭代交付 |
-| 9 | in_progress | Iteration 1：后端核心闭环实现 |
+| 9 | complete | Iteration 1：后端核心闭环实现 |
+| 10 | in_progress | Iteration 2：前端工作台、写回和回滚 |
 
 ## 已知决策
 
@@ -37,3 +38,4 @@
 - DeepSeek 专有字段如 `thinking`、`reasoning_content` 不完全依赖 LangChain OpenAI wrapper，正式实现需要自定义 DeepSeek client/model adapter。
 - 开发计划已改为 3 次主迭代；如需严格 2 次迭代，文档中有压缩方案。
 - Iteration 1 开始前已确认工作区干净；规划文档已提交为 `0ac545a docs: add agent development plan`。
+- Iteration 2 开始前已确认工作区干净；Iteration 1 已提交为 `611da45 feat: implement iteration 1 dry-run backend`。

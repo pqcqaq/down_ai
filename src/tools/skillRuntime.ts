@@ -147,6 +147,28 @@ export class SkillRuntime {
     });
   }
 
+  async applySegmentRevisions(input: {
+    taskId: string;
+    sourceTex: string;
+    packetPath: string;
+    outTex: string;
+    stepKey?: TaskStepKey;
+  }): Promise<SkillCommandResult> {
+    await fs.mkdir(path.dirname(input.outTex), { recursive: true });
+    return this.runPython({
+      taskId: input.taskId,
+      stepKey: input.stepKey,
+      toolName: "apply_segment_revisions",
+      args: [
+        this.scriptPath("apply_segment_revisions.py"),
+        input.sourceTex,
+        input.packetPath,
+        "--out",
+        input.outTex,
+      ],
+    });
+  }
+
   async checkProtectedTokens(input: {
     taskId: string;
     originalTex: string;

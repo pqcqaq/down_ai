@@ -121,6 +121,7 @@ function runMigrations(sqlite: Database.Database): void {
       id TEXT PRIMARY KEY,
       task_id TEXT NOT NULL,
       file_path TEXT NOT NULL,
+      packet_index INTEGER,
       line_start INTEGER NOT NULL,
       line_end INTEGER NOT NULL,
       section_path_json TEXT NOT NULL,
@@ -216,4 +217,15 @@ function runMigrations(sqlite: Database.Database): void {
       created_at TEXT NOT NULL
     );
   `);
+
+  ensureColumn(sqlite, "latex_segments", "packet_index", "INTEGER");
+}
+
+function ensureColumn(sqlite: Database.Database, table: string, column: string, definition: string): void {
+  const columns = sqlite.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+  if (columns.some((item) => item.name === column)) {
+    return;
+  }
+
+  sqlite.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
 }
