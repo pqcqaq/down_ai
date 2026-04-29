@@ -66,6 +66,10 @@ export class DeepSeekError extends Error {
 }
 
 export async function generateContent(content: string): Promise<string> {
+  if (!env.deepseekApiKey) {
+    throw new DeepSeekError("Missing required environment variable: DEEPSEEK_API_KEY", 500);
+  }
+
   const response = await fetch(`${env.deepseekBaseUrl}/chat/completions`, {
     method: "POST",
     headers: {

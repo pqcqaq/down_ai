@@ -37,13 +37,19 @@ function readReasoningEffort(): "high" | "max" {
 }
 
 export const env = {
-  deepseekApiKey: readRequiredEnv("DEEPSEEK_API_KEY"),
+  deepseekApiKey: process.env.DEEPSEEK_API_KEY?.trim() || "",
   deepseekModel: process.env.DEEPSEEK_MODEL?.trim() || "deepseek-v4-pro",
   deepseekBaseUrl: normalizeBaseUrl(
     process.env.DEEPSEEK_BASE_URL?.trim() || "https://api.deepseek.com",
   ),
   deepseekThinking: readThinkingMode(),
   deepseekReasoningEffort: readReasoningEffort(),
+  useLiveLlm: process.env.USE_LIVE_LLM?.trim() === "true",
+  runLiveLlmTests: process.env.RUN_LIVE_LLM_TESTS?.trim() === "true",
+  skillDir: process.env.BYPASS_AIGC_SKILL_DIR?.trim() || "../BypassAIGC-Skill",
+  pythonBin: process.env.PYTHON_BIN?.trim() || "python",
+  dataDir: process.env.DOWN_AI_DATA_DIR?.trim() || ".down-ai",
+  workspaceRoot: process.env.WORKSPACE_ROOT?.trim() || "..",
   port: Number(process.env.PORT || 3000),
   corsOrigin: process.env.CORS_ORIGIN?.trim() || "*",
 };

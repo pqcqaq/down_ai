@@ -1,7 +1,11 @@
 import cors from "cors";
 import express from "express";
 import { env } from "./config/env.js";
+import { eventsRouter } from "./routes/events.js";
 import { generateRouter } from "./routes/generate.js";
+import { reportsRouter } from "./routes/reports.js";
+import { tasksRouter } from "./routes/tasks.js";
+import { workspacesRouter } from "./routes/workspaces.js";
 
 export function createApp() {
   const app = express();
@@ -20,12 +24,19 @@ export function createApp() {
   });
 
   app.use("/api", generateRouter);
+  app.use("/api/workspaces", workspacesRouter);
+  app.use("/api/reports", reportsRouter);
+  app.use("/api/tasks", tasksRouter);
+  app.use("/api/events", eventsRouter);
 
   app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     const message = err instanceof Error ? err.message : "Internal server error";
 
     res.status(500).json({
-      error: message,
+      error: {
+        code: "INTERNAL_ERROR",
+        message,
+      },
     });
   });
 

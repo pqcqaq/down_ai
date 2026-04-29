@@ -13,11 +13,16 @@
 
 | 变量名 | 必填 | 默认值 | 说明 |
 | --- | --- | --- | --- |
-| `DEEPSEEK_API_KEY` | 是 | 无 | DeepSeek API Key，通过环境变量注入 |
+| `DEEPSEEK_API_KEY` | 否 | 无 | DeepSeek API Key，通过环境变量注入；`/api/generate` 或 `USE_LIVE_LLM=true` 时需要 |
 | `DEEPSEEK_MODEL` | 否 | `deepseek-v4-pro` | DeepSeek 模型名称 |
 | `DEEPSEEK_BASE_URL` | 否 | `https://api.deepseek.com` | DeepSeek API 基础地址 |
 | `DEEPSEEK_THINKING` | 否 | `disabled` | 是否启用思考模式，可选值：`enabled`、`disabled` |
 | `DEEPSEEK_REASONING_EFFORT` | 否 | `high` | 思考强度，仅在 `DEEPSEEK_THINKING=enabled` 时生效，可选值：`high`、`max` |
+| `USE_LIVE_LLM` | 否 | `false` | 任务 dry-run 是否真实调用 DeepSeek；默认使用 mock LLM |
+| `BYPASS_AIGC_SKILL_DIR` | 否 | `../BypassAIGC-Skill` | BypassAIGC-Skill 项目目录 |
+| `PYTHON_BIN` | 否 | `python` | Python 可执行命令 |
+| `DOWN_AI_DATA_DIR` | 否 | `.down-ai` | SQLite、上传文件、artifact 和日志目录 |
+| `WORKSPACE_ROOT` | 否 | `..` | 允许访问的工作区根目录 |
 | `PORT` | 否 | `3000` | HTTP 服务端口 |
 | `CORS_ORIGIN` | 否 | `*` | 允许跨域访问的来源 |
 
@@ -173,3 +178,85 @@ curl -X POST http://localhost:3000/api/generate \
 - 请求体大小限制为 `1mb`。
 - 当前接口不做用户鉴权，如需公网部署，应在网关或服务层增加鉴权。
 - 当前接口为非流式响应，DeepSeek 请求参数中固定使用 `stream: false`。
+
+## Iteration 1 Agent API
+
+以下接口用于 LaTeX 论文 dry-run 任务。Iteration 1 默认不写回 `.tex` 文件，只生成修订草稿、任务事件和报告 artifact。
+
+### `POST /api/workspaces/inspect`
+
+检查 LaTeX 项目目录。
+
+```json
+{
+  "projectDir": "tests/fixtures/latex-project"
+}
+```
+
+响应包含 `.tex` 数量、`.bib` 数量、主文件候选和警告。
+
+### `POST /api/workspaces/audit`
+
+调用 `BypassAIGC-Skill` 的 `latex_project_audit.py`，返回完整审计结果，并创建一个审计任务记录。
+
+### `POST /api/reports/upload`
+
+上传报告 PDF。请求格式为 `multipart/form-data`，文件字段名为 `file`。
+
+响应：
+
+```json
+{
+  "fileId": "file_xxx",
+  "filePath": "...",
+  "sizeBytes": 12345,
+  "sha256": "..."
+}
+```
+
+### `GET /api/reports/:fileId/parse`
+
+解析已上传 PDF，返回解析文本块和 finding 草稿。
+
+### `POST /api/tasks`
+
+创建 dry-run 任务。
+
+```json
+{
+  "projectDir": "tests/fixtures/latex-project",
+  "reportFileId": "file_xxx",
+  "options": {
+    "scope": "report_findings",
+    "language": "auto",
+    "revisionStrength": "medium",
+    "applyMode": "dry_run",
+    "compileMode": "none",
+    "maxSegments": 3
+  }
+}
+```
+
+### `POST /api/tasks/:taskId/start`
+
+同步启动 Iteration 1 dry-run。流程包括项目审计、报告解析、修订包生成、段落索引、风格诊断、finding 匹配、修订草稿生成和 dry-run 报告生成。
+
+### `GET /api/tasks/:taskId`
+
+查询任务快照。
+
+### `GET /api/tasks/:taskId/steps`
+
+查询任务步骤进度。
+
+### `GET /api/tasks/:taskId/events?after=0`
+
+查询任务事件，可用于 SSE 断线补齐。
+
+### `GET /api/events/tasks/:taskId?after=0`
+
+返回 `text/event-stream` 格式的任务事件流。
+
+### `GET /api/tasks/:taskId/revisions`
+
+查询 dry-run 生成的修订草稿。

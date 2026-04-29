@@ -47,4 +47,18 @@
 
 ## 待处理
 
-- 后续如果进入实现阶段，优先从数据库迁移、SkillRuntime、任务进度服务和 parser registry 开始。
+- Iteration 1 已开始实现：
+  - 新增 SQLite/Drizzle schema 和 raw migration。
+  - 新增 `TaskProgressService`，记录 tasks、steps、events。
+  - 新增 `ArtifactStore` 和 `ReportFileService`。
+  - 新增 `SkillRuntime`，封装 BypassAIGC-Skill 核心脚本。
+  - 新增 `ParserRegistry` 和 PDF parser。
+  - 新增 mock/live `RevisionLlmClient`。
+  - 新增 `TaskOrchestrator` dry-run 闭环。
+  - 新增 workspace/report/task/event API。
+  - 新增 Vitest、LaTeX fixture 和基础测试。
+- 已验证：
+  - `npm run test`
+  - `npm run typecheck`
+  - `npm run build`
+  - 编译后 Express API dry-run：创建任务、启动任务、生成 revision draft。

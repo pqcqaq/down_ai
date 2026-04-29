@@ -1,0 +1,26 @@
+\documentclass{article}
+\usepackage{graphicx}
+
+\begin{document}
+
+\section{引言}
+\label{sec:intro}
+
+本文设计了一个用于论文文本处理的系统，并完成了相关模块的实现。该系统通过任务状态记录、段落抽取和模型改写流程，提供了一种较为完整的处理方案，具有重要意义。
+
+\section{方法}
+\label{sec:method}
+
+如图 \ref{fig:arch} 所示，系统首先读取用户选择的 LaTeX 项目，然后解析报告中的文本片段，最后对需要处理的段落生成修订建议。该过程保留原有引用和交叉引用，例如 \cite{smith2024}。
+
+\begin{figure}
+\centering
+\fbox{architecture}
+\caption{System architecture}
+\label{fig:arch}
+\end{figure}
+
+\bibliographystyle{plain}
+\bibliography{refs}
+
+\end{document}
