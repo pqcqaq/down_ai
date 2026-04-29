@@ -134,6 +134,15 @@ export class TaskProgressService {
     };
   }
 
+  listTasks(limit = 20): TaskRecord[] {
+    const safeLimit = Math.max(1, Math.min(limit, 100));
+    const rows = this.handle.sqlite
+      .prepare("SELECT id FROM tasks ORDER BY created_at DESC LIMIT ?")
+      .all(safeLimit) as Array<{ id: string }>;
+
+    return rows.map((row) => this.getTask(row.id)).filter((task): task is TaskRecord => Boolean(task));
+  }
+
   listSteps(taskId: string): TaskStepRecord[] {
     const rows = this.handle.sqlite
       .prepare("SELECT * FROM task_steps WHERE task_id = ? ORDER BY rowid ASC")

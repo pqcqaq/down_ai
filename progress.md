@@ -116,3 +116,13 @@
   - `npm run build`
   - `npm run frontend:build`
   - `npm run docs:build`
+- 前端可用性加固：
+  - 新增 `GET /api/workspaces/browse`，允许前端在 `WORKSPACE_ROOT` 内浏览并选择 LaTeX 项目目录。
+  - 新增 `GET /api/tasks?limit=...`，前端可展示最近任务并恢复任务状态。
+  - 新增 `POST /api/tasks/:taskId/revisions/approve-all`，支持批量确认修订。
+  - 前端支持 `VITE_API_BASE_URL`，可指向非 3000 端口后端，便于本地验证和部署切换。
+  - 工作台增加目录浏览、PDF 上传后解析反馈、最近任务、批量确认无风险/全部修订、重新生成、应用、回滚等直接操作。
+  - API E2E 测试增加目录浏览、报告解析、最近任务和批量确认断言。
+  - 浏览器验证使用临时 LaTeX 项目和临时 PDF 报告跑通：选择目录、上传解析、启动 dry-run、确认无风险、应用写回、回滚。
+  - 前端增加 data URI favicon，消除浏览器验证中的 favicon 404 控制台错误。
+  - 最终验证通过：`npm run test`、`npm run test:live`、`npm run typecheck`、`npm run build`、`npm run frontend:build`、`npm run docs:build`。

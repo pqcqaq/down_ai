@@ -195,6 +195,30 @@ curl -X POST http://localhost:3000/api/generate \
 
 响应包含 `.tex` 数量、`.bib` 数量、主文件候选和警告。
 
+### `GET /api/workspaces/browse?dir=<path>`
+
+浏览 `WORKSPACE_ROOT` 内的目录，供前端工作台直接选择 LaTeX 项目目录。
+
+响应：
+
+```json
+{
+  "workspaceRoot": "D:\\Develop\\Projects\\down_ai",
+  "currentDir": "D:\\Develop\\Projects\\down_ai\\papers",
+  "parentDir": "D:\\Develop\\Projects\\down_ai",
+  "entries": [
+    {
+      "name": "paper",
+      "path": "D:\\Develop\\Projects\\down_ai\\paper",
+      "texFiles": 1,
+      "bibFiles": 1,
+      "rootCandidates": 1,
+      "isLatexProject": true
+    }
+  ]
+}
+```
+
 ### `POST /api/workspaces/audit`
 
 调用 `BypassAIGC-Skill` 的 `latex_project_audit.py`，返回完整审计结果，并创建一个审计任务记录。
@@ -237,6 +261,10 @@ curl -X POST http://localhost:3000/api/generate \
 }
 ```
 
+### `GET /api/tasks?limit=10`
+
+返回最近任务列表，前端用于恢复已有任务。
+
 ### `POST /api/tasks/:taskId/start`
 
 同步启动 Iteration 1 dry-run。流程包括项目审计、报告解析、修订包生成、段落索引、风格诊断、finding 匹配、修订草稿生成和 dry-run 报告生成。
@@ -272,6 +300,19 @@ curl -X POST http://localhost:3000/api/generate \
 ### `POST /api/tasks/:taskId/revisions/:revisionId/approve`
 
 确认某条修订可写回。
+
+### `POST /api/tasks/:taskId/revisions/approve-all`
+
+批量确认当前任务下所有有 `revisedText` 的修订。前端的“全部确认”按钮使用该接口。
+
+响应：
+
+```json
+{
+  "ok": true,
+  "approved": 3
+}
+```
 
 ### `POST /api/tasks/:taskId/revisions/:revisionId/reject`
 
@@ -317,6 +358,22 @@ npm run frontend:preview
 ```
 
 前端默认通过 Vite proxy 访问 `http://localhost:3000` 的后端 API。
+
+如果需要连接其他后端端口，可在启动前设置：
+
+```bash
+VITE_API_BASE_URL=http://127.0.0.1:3300 npm run frontend:dev
+```
+
+当前工作台已支持：
+
+- 在 `WORKSPACE_ROOT` 内浏览并选择 LaTeX 项目目录。
+- 上传并解析 PDF 报告，显示报告线索数量。
+- 一键创建并启动 dry-run。
+- 查看任务步骤、事件和最近任务。
+- 审核、编辑、重新生成、确认、拒绝修订。
+- 批量确认无风险修订或全部修订。
+- 应用写回并按任务 journal 回滚。
 
 ## 测试
 

@@ -15,6 +15,13 @@ const progress = new TaskProgressService(handle);
 const orchestrator = new TaskOrchestrator(handle);
 const revisionApplyService = new RevisionApplyService(handle);
 
+tasksRouter.get("/", (req, res) => {
+  const limit = Number(req.query.limit || 10);
+  res.json({
+    tasks: progress.listTasks(limit),
+  });
+});
+
 tasksRouter.post("/", async (req, res, next) => {
   try {
     const input = createTaskSchema.parse(req.body);
@@ -108,6 +115,31 @@ tasksRouter.get("/:taskId/revisions", (req, res) => {
   });
 });
 
+tasksRouter.post("/:taskId/revisions/approve-all", (req, res, next) => {
+  try {
+    const rows = handle.sqlite
+      .prepare(
+        `SELECT id
+         FROM revisions
+         WHERE task_id = ? AND revised_text IS NOT NULL AND status IN ('draft', 'rejected', 'approved')
+         ORDER BY created_at ASC`,
+      )
+      .all(req.params.taskId) as Array<{ id: string }>;
+
+    for (const row of rows) {
+      revisionApplyService.approveRevision(req.params.taskId, row.id);
+    }
+    progress.insertEvent(req.params.taskId, {
+      type: "revisions_approved_all",
+      message: `已批量确认 ${rows.length} 条修订`,
+      payload: { count: rows.length },
+    });
+    res.json({ ok: true, approved: rows.length });
+  } catch (error) {
+    next(error);
+  }
+});
+
 tasksRouter.post("/:taskId/revisions/:revisionId/approve", (req, res, next) => {
   try {
     revisionApplyService.approveRevision(req.params.taskId, req.params.revisionId);
@@ -167,7 +199,7 @@ tasksRouter.post("/:taskId/revisions/:revisionId/regenerate", async (req, res, n
       res.status(404).json({ error: "Revision not found." });
       return;
     }
-    const decision = await createRevisionLlmClient().generateRevisionDecision({
+    const decision = await createRevisionLlmClient(handle).generateRevisionDecision({
       taskId: req.params.taskId,
       stepKey: "generate_revisions",
       segmentId: row.segment_id,

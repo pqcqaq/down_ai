@@ -5,6 +5,10 @@ docs/.vitepress/cache/
 docs/.vitepress/dist/
 frontend/dist/
 .down-ai/
+.playwright-mcp/
+tmp-ui-*/
+tmp-ui-report.pdf
+tmp-ui-run.json
 .env
 .DS_Store
 npm-debug.log*

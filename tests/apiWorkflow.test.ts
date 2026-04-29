@@ -48,6 +48,21 @@ describe("realistic API workflow", () => {
     expect(upload.body.fileId).toMatch(/^file_/);
 
     const projectDir = path.join(testRoot, "project");
+    const browsed = await request(app)
+      .get(`/api/workspaces/browse?dir=${encodeURIComponent(testRoot)}`)
+      .expect(200);
+    expect(browsed.body.entries).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: "project",
+          isLatexProject: true,
+        }),
+      ]),
+    );
+
+    const parsedReport = await request(app).get(`/api/reports/${upload.body.fileId}/parse`).expect(200);
+    expect(parsedReport.body.findings.length).toBeGreaterThan(0);
+
     const created = await request(app)
       .post("/api/tasks")
       .send({
@@ -58,6 +73,9 @@ describe("realistic API workflow", () => {
       .expect(201);
 
     const taskId = created.body.task.id;
+    const recentTasks = await request(app).get("/api/tasks?limit=5").expect(200);
+    expect(recentTasks.body.tasks.map((item: { id: string }) => item.id)).toContain(taskId);
+
     const started = await request(app).post(`/api/tasks/${taskId}/start`).expect(200);
     expect(started.body.task.state).toBe("completed");
 
@@ -77,7 +95,8 @@ describe("realistic API workflow", () => {
     const revision = revisions.body.revisions.find((item: { revisedText?: string }) => item.revisedText);
     expect(revision).toBeTruthy();
 
-    await request(app).post(`/api/tasks/${taskId}/revisions/${revision.id}/approve`).expect(200);
+    const approved = await request(app).post(`/api/tasks/${taskId}/revisions/approve-all`).expect(200);
+    expect(approved.body.approved).toBeGreaterThan(0);
     const applied = await request(app).post(`/api/tasks/${taskId}/apply`).expect(200);
     expect(applied.body.appliedFiles).toBe(1);
     expect(fs.readFileSync(mainTex, "utf8")).not.toBe(before);

@@ -7,6 +7,9 @@ export type Task = {
   progressCurrent: number;
   progressTotal: number;
   summary?: unknown;
+  errorMessage?: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type TaskStep = {
@@ -35,8 +38,41 @@ export type Revision = {
   riskFlags: string[];
 };
 
+export type WorkspaceEntry = {
+  name: string;
+  path: string;
+  texFiles: number;
+  bibFiles: number;
+  rootCandidates: number;
+  isLatexProject: boolean;
+};
+
+export type WorkspaceBrowseResult = {
+  workspaceRoot: string;
+  currentDir: string;
+  parentDir?: string;
+  entries: WorkspaceEntry[];
+};
+
+export type ReportParseResult = {
+  fileId: string;
+  findings: Array<{
+    page?: number;
+    rawText: string;
+    normalizedText: string;
+    riskType: string;
+    severity: string;
+    confidence: number;
+    source: string;
+  }>;
+};
+
+const apiBaseUrl = (
+  (import.meta as ImportMeta & { env?: { VITE_API_BASE_URL?: string } }).env?.VITE_API_BASE_URL || ""
+).replace(/\/+$/, "");
+
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, {
+  const response = await fetch(`${apiBaseUrl}${url}`, {
     ...init,
     headers: init?.body instanceof FormData ? init.headers : { "Content-Type": "application/json", ...init?.headers },
   });
@@ -62,6 +98,11 @@ export async function inspectWorkspace(projectDir: string) {
   });
 }
 
+export async function browseWorkspaces(dir?: string) {
+  const query = dir ? `?dir=${encodeURIComponent(dir)}` : "";
+  return request<WorkspaceBrowseResult>(`/api/workspaces/browse${query}`);
+}
+
 export async function uploadReport(file: File) {
   const form = new FormData();
   form.append("file", file);
@@ -69,6 +110,10 @@ export async function uploadReport(file: File) {
     method: "POST",
     body: form,
   });
+}
+
+export async function parseReport(fileId: string) {
+  return request<ReportParseResult>(`/api/reports/${fileId}/parse`);
 }
 
 export async function createTask(input: { projectDir: string; reportFileId?: string; maxSegments: number }) {
@@ -87,6 +132,10 @@ export async function createTask(input: { projectDir: string; reportFileId?: str
 
 export async function startTask(taskId: string) {
   return request<{ task: Task }>(`/api/tasks/${taskId}/start`, { method: "POST" });
+}
+
+export async function listTasks(limit = 10) {
+  return request<{ tasks: Task[] }>(`/api/tasks?limit=${limit}`);
 }
 
 export async function getTask(taskId: string) {
@@ -109,8 +158,18 @@ export async function approveRevision(taskId: string, revisionId: string) {
   return request<{ ok: true }>(`/api/tasks/${taskId}/revisions/${revisionId}/approve`, { method: "POST" });
 }
 
+export async function approveAllRevisions(taskId: string) {
+  return request<{ ok: true; approved: number }>(`/api/tasks/${taskId}/revisions/approve-all`, { method: "POST" });
+}
+
 export async function rejectRevision(taskId: string, revisionId: string) {
   return request<{ ok: true }>(`/api/tasks/${taskId}/revisions/${revisionId}/reject`, { method: "POST" });
+}
+
+export async function regenerateRevision(taskId: string, revisionId: string) {
+  return request<{ ok: true; decision: unknown }>(`/api/tasks/${taskId}/revisions/${revisionId}/regenerate`, {
+    method: "POST",
+  });
 }
 
 export async function editRevision(taskId: string, revisionId: string, revisedText: string) {

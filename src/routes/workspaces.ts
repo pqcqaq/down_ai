@@ -10,6 +10,15 @@ const workspaceService = new WorkspaceService();
 const progress = new TaskProgressService();
 const skillRuntime = new SkillRuntime();
 
+workspacesRouter.get("/browse", async (req, res, next) => {
+  try {
+    const dir = typeof req.query.dir === "string" ? req.query.dir : undefined;
+    res.json(await workspaceService.browse(dir));
+  } catch (error) {
+    next(error);
+  }
+});
+
 workspacesRouter.post("/inspect", async (req, res, next) => {
   try {
     const input = inspectWorkspaceSchema.parse(req.body);
