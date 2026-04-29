@@ -241,6 +241,14 @@ curl -X POST http://localhost:3000/api/generate \
 
 同步启动 Iteration 1 dry-run。流程包括项目审计、报告解析、修订包生成、段落索引、风格诊断、finding 匹配、修订草稿生成和 dry-run 报告生成。
 
+### `POST /api/tasks/:taskId/pause`
+
+将任务标记为 `paused_for_user` 并写入任务事件。当前版本的执行器是同步 dry-run，主要用于长任务能力预留和异常恢复。
+
+### `POST /api/tasks/:taskId/cancel`
+
+将任务标记为 `cancelled` 并写入任务事件。
+
 ### `GET /api/tasks/:taskId`
 
 查询任务快照。
@@ -309,3 +317,19 @@ npm run frontend:preview
 ```
 
 前端默认通过 Vite proxy 访问 `http://localhost:3000` 的后端 API。
+
+## 测试
+
+默认测试：
+
+```bash
+npm run test
+```
+
+真实 DeepSeek API 测试：
+
+```bash
+npm run test:live
+```
+
+`test:live` 依赖 `RUN_LIVE_LLM_TESTS=true` 和 `DEEPSEEK_API_KEY`。脚本已内置 `RUN_LIVE_LLM_TESTS=true`，如果没有 API Key，测试会自动跳过。

@@ -77,3 +77,16 @@
   - `npm run typecheck`
   - `npm run build`
   - 编译后 Express API 写回/回滚 smoke test。
+- Iteration 2 已提交：`2e8dfeb feat: add revision workbench and apply flow`。
+- Iteration 3 已实现：
+  - 新增任务 pause/cancel API。
+  - 新增 `recoverInterruptedTasks()`，可将运行中断的任务标记为 `paused_for_recovery`。
+  - 新增恢复能力测试。
+  - 新增 `tests/live/deepseekLive.test.ts`，真实 DeepSeek API 测试默认受环境变量控制。
+- Iteration 3 已验证：
+  - `npm run test`
+  - `npm run test:live`
+  - `npm run typecheck`
+  - `npm run build`
+  - `npm run frontend:build`
+  - `npm run docs:build`

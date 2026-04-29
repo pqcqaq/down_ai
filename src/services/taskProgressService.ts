@@ -268,6 +268,64 @@ export class TaskProgressService {
     tx();
   }
 
+  cancelTask(taskId: string, reason = "用户取消任务"): void {
+    const now = new Date().toISOString();
+    const tx = this.handle.sqlite.transaction(() => {
+      this.handle.sqlite
+        .prepare(
+          `UPDATE tasks
+           SET state = 'cancelled', error_message = @reason, updated_at = @now, finished_at = @now
+           WHERE id = @taskId`,
+        )
+        .run({ taskId, reason, now });
+      this.insertEvent(taskId, {
+        type: "task_cancelled",
+        message: reason,
+      });
+    });
+    tx();
+  }
+
+  pauseTask(taskId: string, reason = "任务已暂停"): void {
+    const now = new Date().toISOString();
+    const tx = this.handle.sqlite.transaction(() => {
+      this.handle.sqlite
+        .prepare("UPDATE tasks SET state = 'paused_for_user', error_message = @reason, updated_at = @now WHERE id = @taskId")
+        .run({ taskId, reason, now });
+      this.insertEvent(taskId, {
+        type: "task_paused",
+        message: reason,
+      });
+    });
+    tx();
+  }
+
+  recoverInterruptedTasks(): number {
+    const now = new Date().toISOString();
+    const rows = this.handle.sqlite
+      .prepare("SELECT id FROM tasks WHERE state = 'running'")
+      .all() as Array<{ id: string }>;
+
+    const tx = this.handle.sqlite.transaction(() => {
+      for (const row of rows) {
+        this.handle.sqlite
+          .prepare(
+            `UPDATE tasks
+             SET state = 'paused_for_recovery', error_code = 'PROCESS_INTERRUPTED',
+                 error_message = '服务上次退出时任务仍在运行', updated_at = @now
+             WHERE id = @taskId`,
+          )
+          .run({ taskId: row.id, now });
+        this.insertEvent(row.id, {
+          type: "task_recovery_required",
+          message: "服务上次退出时任务仍在运行，已标记为需要恢复。",
+        });
+      }
+    });
+    tx();
+    return rows.length;
+  }
+
   insertEvent(
     taskId: string,
     input: { type: string; message: string; stepKey?: string; payload?: unknown },

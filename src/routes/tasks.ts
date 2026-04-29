@@ -42,6 +42,24 @@ tasksRouter.post("/:taskId/start", async (req, res, next) => {
   }
 });
 
+tasksRouter.post("/:taskId/pause", (req, res, next) => {
+  try {
+    progress.pauseTask(req.params.taskId);
+    res.json({ task: progress.getTask(req.params.taskId) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+tasksRouter.post("/:taskId/cancel", (req, res, next) => {
+  try {
+    progress.cancelTask(req.params.taskId);
+    res.json({ task: progress.getTask(req.params.taskId) });
+  } catch (error) {
+    next(error);
+  }
+});
+
 tasksRouter.get("/:taskId", (req, res) => {
   const task = progress.getTask(req.params.taskId);
   if (!task) {
