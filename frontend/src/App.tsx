@@ -11,8 +11,6 @@ import {
   RefreshCw,
   RotateCcw,
   Save,
-  Settings,
-  Sparkles,
   Upload,
   X,
 } from "lucide-react";
@@ -43,12 +41,10 @@ import {
 } from "./api";
 
 type WorkspaceInfo = Awaited<ReturnType<typeof inspectWorkspace>>;
-type ModalName = "directory" | "settings" | "history" | "events" | "revision" | null;
+type ModalName = "directory" | "history" | "events" | "revision" | null;
 
 export function App() {
   const [projectDir, setProjectDir] = useState("tests/fixtures/realistic-thesis");
-  const [limitSegments, setLimitSegments] = useState(false);
-  const [maxSegments, setMaxSegments] = useState(20);
   const [workspace, setWorkspace] = useState<WorkspaceInfo | undefined>();
   const [browser, setBrowser] = useState<WorkspaceBrowseResult | undefined>();
   const [reportFileId, setReportFileId] = useState<string | undefined>();
@@ -167,7 +163,6 @@ export function App() {
     const created = await createTask({
       projectDir: inspected.projectDir,
       reportFileId,
-      maxSegments: limitSegments ? maxSegments : null,
     });
     setTask(created.task);
     const started = await startTask(created.task.id);
@@ -212,10 +207,6 @@ export function App() {
           <button type="button" onClick={() => setModal("history")}>
             <History size={16} />
             历史任务
-          </button>
-          <button type="button" onClick={() => setModal("settings")}>
-            <Settings size={16} />
-            设置
           </button>
           <span className={`state-pill state-${task?.state ?? "idle"}`}>{task?.state ?? "未创建"}</span>
         </div>
@@ -295,7 +286,7 @@ export function App() {
         <SummaryItem label="报告" value={reportName ? `${reportName}${reportFindingCount == null ? "" : ` / ${reportFindingCount} 条线索`}` : "未上传"} />
         <SummaryItem
           label="任务"
-          value={task ? `${task.id.slice(0, 12)} / ${progressPercent}%` : limitSegments ? `最多 ${maxSegments} 段` : "全部风险段落"}
+          value={task ? `${task.id.slice(0, 12)} / ${progressPercent}%` : "全部报告命中段落"}
         />
         <SummaryItem label="修订" value={`${revisionStats.total} 条 / ${revisionStats.approved} 已确认 / ${revisionStats.applied} 已写回`} />
       </section>
@@ -478,33 +469,6 @@ export function App() {
               </div>
             ))}
           </div>
-        </Modal>
-      )}
-
-      {modal === "settings" && (
-        <Modal title="任务设置" onClose={() => setModal(null)}>
-          <label className="checkbox-line">
-            <input
-              data-testid="limit-segments-checkbox"
-              type="checkbox"
-              checked={limitSegments}
-              onChange={(event) => setLimitSegments(event.target.checked)}
-            />
-            限制处理数量
-          </label>
-          <label>
-            安全上限
-            <input
-              data-testid="max-segments-input"
-              type="number"
-              min={1}
-              max={500}
-              disabled={!limitSegments}
-              value={maxSegments}
-              onChange={(event) => setMaxSegments(Math.max(1, Math.min(500, Number(event.target.value) || 1)))}
-            />
-          </label>
-          <p className="hint">关闭限制时会处理报告匹配到的全部风险段落；开启后仅用于控制模型调用成本。</p>
         </Modal>
       )}
 

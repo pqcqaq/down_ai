@@ -536,17 +536,6 @@ label {
   gap: 7px;
 }
 
-.checkbox-line {
-  align-items: center;
-  display: flex;
-  gap: 9px;
-}
-
-.checkbox-line input {
-  min-height: auto;
-  width: 16px;
-}
-
 textarea {
   min-height: 260px;
   resize: vertical;
