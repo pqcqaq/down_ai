@@ -126,3 +126,24 @@
   - 浏览器验证使用临时 LaTeX 项目和临时 PDF 报告跑通：选择目录、上传解析、启动 dry-run、确认无风险、应用写回、回滚。
   - 前端增加 data URI favicon，消除浏览器验证中的 favicon 404 控制台错误。
   - 最终验证通过：`npm run test`、`npm run test:live`、`npm run typecheck`、`npm run build`、`npm run frontend:build`、`npm run docs:build`。
+- 根据用户反馈继续调整前端：
+  - 将目录浏览、历史任务、任务设置、事件日志、修订详情/编辑移动到 modal 弹窗。
+  - 主页面只保留基本工作流：项目路径、选择目录按钮、上传报告、开始分析、进度、修订列表和批量操作。
+  - 修订列表改为紧凑行，点击行才打开 diff 和编辑 textarea。
+- 使用用户提供的真实环境验证：
+  - LaTeX 项目：`D:\Develop\Projects\down_ai\tests\WiSh-LaTeX`。
+  - 检测报告：`G:\Downloads\检测结果-WiSh：基于人工智能技术的操作系统交互.pdf`。
+  - 由于浏览器上传沙箱限制，将 PDF 原样复制为工作区临时文件后上传测试。
+  - 报告成功解析出 200 条线索。
+  - 第一次真实 dry-run 发现修订数为 0，根因是系统选择了只有 `\input` 的 wrapper root candidate。
+  - 修复 `TaskOrchestrator` 的修订源文件选择策略，优先选择含正文信号的 `chapters/body.tex` 类文件，并补充 `tests/fixtures/input-project` 回归测试。
+  - 第二次真实 live dry-run 成功：抽取 `chapters/body.tex`，生成 155 个正文 segment、3 条 DeepSeek 修订建议，`agent_runs` 记录 3 次 `deepseek-v4-pro` 调用完成。
+  - 真实测试期间没有点击“应用”，未写回真实 LaTeX 项目。
+  - 发现 DeepSeek 结构化输出可能返回 `revisedText: null`，已在 `DeepSeekRevisionLlmClient` 中规范化为 `undefined`。
+- 本轮验证通过：
+  - `npm run test`：11 个离线测试通过，3 个 live 测试默认跳过。
+  - `npm run test:live`：3 个真实 DeepSeek 测试通过。
+  - `npm run typecheck`
+  - `npm run build`
+  - `npm run frontend:build`
+  - `npm run docs:build`

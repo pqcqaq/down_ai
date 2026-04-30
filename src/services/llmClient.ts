@@ -111,8 +111,12 @@ export class DeepSeekRevisionLlmClient implements RevisionLlmClient {
       }
 
       const raw = stripReasoningContent(payload?.choices?.[0]?.message?.content || "");
+      const parsedRaw = JSON.parse(raw) as Record<string, unknown>;
+      if (parsedRaw.revisedText == null) {
+        delete parsedRaw.revisedText;
+      }
       const parsed = revisionDecisionSchema.parse({
-        ...JSON.parse(raw),
+        ...parsedRaw,
         segmentId: input.segmentId,
       });
       this.recorder.complete(runId, parsed, payload?.usage);

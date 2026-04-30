@@ -198,16 +198,51 @@ export class TaskOrchestrator {
 
   private pickRootTex(audit: Record<string, unknown>): string {
     const candidates = Array.isArray(audit.root_candidates) ? audit.root_candidates : [];
+    const files = Array.isArray(audit.files) ? audit.files : [];
+    const typedFiles = files.filter((file): file is { path: string; labels?: unknown[]; refs?: unknown[]; cites?: unknown[]; inputs?: unknown[] } => {
+      return typeof file === "object" && file !== null && typeof (file as { path?: unknown }).path === "string";
+    });
+
+    const scored = typedFiles
+      .map((file) => {
+        const normalized = toPosix(file.path).toLowerCase();
+        const labels = Array.isArray(file.labels) ? file.labels.length : 0;
+        const refs = Array.isArray(file.refs) ? file.refs.length : 0;
+        const cites = Array.isArray(file.cites) ? file.cites.length : 0;
+        const inputs = Array.isArray(file.inputs) ? file.inputs.length : 0;
+        const isRootCandidate = candidates.includes(file.path);
+        let score = labels * 2 + refs + cites + Math.min(inputs, 2);
+        if (/\/chapters?\//.test(normalized) || /\/body/.test(normalized) || /正文|章节/.test(file.path)) {
+          score += 12;
+        }
+        if (/\/dist\//.test(normalized) || /\/build\//.test(normalized)) {
+          score -= 20;
+        }
+        if (isRootCandidate && inputs > 0 && labels + refs + cites === 0) {
+          score -= 10;
+        }
+        if (path.basename(file.path).toLowerCase() === "main.tex") {
+          score += 4;
+        }
+        return { file, score };
+      })
+      .sort((a, b) => b.score - a.score);
+
+    const best = scored.find((item) => item.score > 0);
+    if (best) {
+      return best.file.path;
+    }
+
+    const mainRoot = candidates.find((candidate) => typeof candidate === "string" && path.basename(candidate).toLowerCase() === "main.tex");
+    if (typeof mainRoot === "string") {
+      return mainRoot;
+    }
     const root = candidates[0];
     if (typeof root === "string") {
       return root;
     }
-    const files = Array.isArray(audit.files) ? audit.files : [];
-    const first = files.find((file): file is { path: string } => {
-      return typeof file === "object" && file !== null && typeof (file as { path?: unknown }).path === "string";
-    });
-    if (first) {
-      return first.path;
+    if (typedFiles[0]) {
+      return typedFiles[0].path;
     }
     throw new Error("No .tex file found in LaTeX project audit.");
   }
@@ -423,4 +458,8 @@ function ngrams(value: string, size: number): string[] {
     result.push(value.slice(index, index + size));
   }
   return result;
+}
+
+function toPosix(value: string): string {
+  return value.replace(/\\/g, "/");
 }

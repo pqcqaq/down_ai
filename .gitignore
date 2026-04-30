@@ -7,8 +7,9 @@ frontend/dist/
 .down-ai/
 .playwright-mcp/
 tmp-ui-*/
-tmp-ui-report.pdf
-tmp-ui-run.json
+tmp-ui-*.pdf
+tmp-ui-*.json
+tests/WiSh-LaTeX/
 .env
 .DS_Store
 npm-debug.log*

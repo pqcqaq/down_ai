@@ -40,3 +40,6 @@
 - 用户要求尽可能少的迭代次数，开发计划已从 6+ 小里程碑收敛为 3 次主迭代，并提供 2 次迭代压缩方案。
 - 真实 live dry-run 测试发现 `DeepSeekRevisionLlmClient` 需要使用当前任务数据库句柄记录 `agent_runs`，否则测试隔离数据库无法审计模型调用；已调整为从 `TaskOrchestrator` 传入 handle。
 - 浏览器验证时发现本机 3000 端口已有旧后端实例，因此前端需要支持 `VITE_API_BASE_URL` 指向其他后端端口；已补充该能力，并用 3300/5174 独立验证前端流程。
+- 用户反馈前端常驻目录树、历史和大段编辑区导致页面混乱；已将这些非基本流程能力迁移到 modal，只在主页面保留线性工作流。
+- 真实 WiSh 项目验证发现 root candidate 可能是只有 `\input` 的 wrapper，直接生成 revision pack 会得到 0 个 segment；已改为根据 labels/refs/cites、chapters/body 路径等正文信号选择修订源文件。
+- 真实 DeepSeek 响应可能把可选字段返回为 `null`，而不是省略字段；已在解析结构化输出前清理 `revisedText: null`。

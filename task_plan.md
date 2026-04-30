@@ -28,6 +28,7 @@
 | 12 | complete | 测试加固：真实场景 fixture、PDF 解析、API E2E、DeepSeek live 覆盖 |
 | 13 | complete | 测试加固补充：真实 SkillRuntime 集成、危险写回拦截、live dry-run 数据库审计 |
 | 14 | complete | 前端可用性加固：目录浏览、报告解析反馈、最近任务、批量审核、浏览器端完整验证 |
+| 15 | complete | 前端降噪与真实 WiSh 验证：次级能力 modal 化、真实报告 live dry-run、正文文件选择修复 |
 
 ## 已知决策
 
