@@ -185,6 +185,11 @@ textarea {
   padding: 8px 10px;
 }
 
+input:disabled {
+  background: #eef1f5;
+  color: #7a8491;
+}
+
 input:focus,
 textarea:focus {
   border-color: #1f7668;
@@ -468,6 +473,17 @@ label {
   display: grid;
   font-size: 13px;
   gap: 7px;
+}
+
+.checkbox-line {
+  align-items: center;
+  display: flex;
+  gap: 9px;
+}
+
+.checkbox-line input {
+  min-height: auto;
+  width: 16px;
 }
 
 textarea {

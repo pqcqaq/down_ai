@@ -33,7 +33,7 @@ export class PdfParser {
   }
 
   toFindings(document: ParsedDocument): ReportFindingDraft[] {
-    return document.textBlocks.slice(0, 200).map((block) => ({
+    return document.textBlocks.map((block) => ({
       rawText: block.text,
       normalizedText: block.normalizedText,
       riskType: "report_text",

@@ -6,7 +6,7 @@ export const taskOptionsSchema = z.object({
   revisionStrength: z.enum(["light", "medium", "conservative_rewrite"]).default("medium"),
   applyMode: z.enum(["dry_run", "review_required", "auto_low_risk"]).default("dry_run"),
   compileMode: z.enum(["none", "auto", "manual"]).default("none"),
-  maxSegments: z.number().int().positive().max(20).default(3),
+  maxSegments: z.number().int().positive().max(500).nullable().default(null),
 });
 
 export type TaskOptions = z.infer<typeof taskOptionsSchema>;

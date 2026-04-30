@@ -44,6 +44,12 @@ type StoredFinding = {
   normalizedText: string;
 };
 
+type MatchedSegment = StoredSegment & {
+  findingId?: string;
+  matchScore?: number;
+  matchMethod?: string;
+};
+
 export class TaskOrchestrator {
   private readonly progress: TaskProgressService;
   private readonly skillRuntime: SkillRuntime;
@@ -94,19 +100,16 @@ export class TaskOrchestrator {
         return this.insertFindings(taskId, task.reportFileId, findingDrafts);
       });
 
-      const rootTex = this.pickRootTex(audit);
-      const packet = await this.runStep(taskId, "build_revision_pack", async () =>
-        this.skillRuntime.buildRevisionPack({ taskId, texFile: rootTex, stepKey: "build_revision_pack" }) as Promise<
-          RevisionPacket
-        >,
+      const packets = await this.runStep(taskId, "build_revision_pack", async () =>
+        this.buildProjectRevisionPacks(taskId, audit),
       );
 
       const segments = await this.runStep(taskId, "index_segments", async () =>
-        this.insertSegments(taskId, packet.source_file, packet.segments),
+        packets.flatMap((packet) => this.insertSegments(taskId, packet.source_file, packet.segments)),
       );
 
       await this.runStep(taskId, "diagnose_style", async () =>
-        this.skillRuntime.lintChineseStyle({ taskId, target: rootTex, stepKey: "diagnose_style" }),
+        this.skillRuntime.lintChineseStyle({ taskId, target: task.projectDir, stepKey: "diagnose_style" }),
       );
 
       const selectedSegments = await this.runStep(taskId, "match_findings", async () =>
@@ -130,7 +133,7 @@ export class TaskOrchestrator {
             segmentId: segment.id,
             originalText: segment.text,
           });
-          output.push(this.insertRevision(taskId, segment.id, segment.text, decision));
+          output.push(this.insertRevision(taskId, segment.id, segment.findingId, segment.text, decision));
         }
         return output;
       });
@@ -143,11 +146,15 @@ export class TaskOrchestrator {
       });
 
       const summary = await this.runStep(taskId, "generate_report", async () => {
+        const matchStats = this.readMatchStats(taskId);
         const report = {
           taskId,
           mode: "dry_run",
           segmentCount: segments.length,
           findingCount: findings.length,
+          matchedFindingCount: matchStats.matchedFindings,
+          selectedSegmentCount: selectedSegments.length,
+          needsReviewMatchCount: matchStats.needsReviewMatches,
           revisionCount: revisions.length,
           generatedAt: new Date().toISOString(),
         };
@@ -162,6 +169,9 @@ export class TaskOrchestrator {
             `- Task: ${taskId}`,
             `- Segments: ${segments.length}`,
             `- Findings: ${findings.length}`,
+            `- Matched findings: ${matchStats.matchedFindings}`,
+            `- Selected segments: ${selectedSegments.length}`,
+            `- Needs review matches: ${matchStats.needsReviewMatches}`,
             `- Revision drafts: ${revisions.length}`,
             "",
           ].join("\n"),
@@ -194,6 +204,80 @@ export class TaskOrchestrator {
       this.progress.completeStep(taskId, stepKey);
     }
     return value;
+  }
+
+  private async buildProjectRevisionPacks(taskId: string, audit: Record<string, unknown>): Promise<RevisionPacket[]> {
+    const texFiles = this.pickProjectTexFiles(audit);
+    const packets: RevisionPacket[] = [];
+
+    for (let index = 0; index < texFiles.length; index += 1) {
+      const texFile = texFiles[index];
+      this.progress.stepProgress(
+        taskId,
+        "build_revision_pack",
+        index + 1,
+        texFiles.length,
+        `正在全局抽取 LaTeX 段落 ${index + 1}/${texFiles.length}`,
+      );
+      const artifactBasename = `revision-packet-${index + 1}-${crypto
+        .createHash("sha1")
+        .update(path.resolve(texFile))
+        .digest("hex")
+        .slice(0, 10)}`;
+      const packet = (await this.skillRuntime.buildRevisionPack({
+        taskId,
+        texFile,
+        stepKey: "build_revision_pack",
+        artifactBasename,
+      })) as RevisionPacket;
+
+      if (Array.isArray(packet.segments) && packet.segments.length > 0) {
+        packets.push(packet);
+      }
+    }
+
+    if (packets.length === 0) {
+      throw new Error("No editable LaTeX prose segment found in project.");
+    }
+
+    return packets;
+  }
+
+  private pickProjectTexFiles(audit: Record<string, unknown>): string[] {
+    const candidates = Array.isArray(audit.root_candidates) ? audit.root_candidates : [];
+    const files = Array.isArray(audit.files) ? audit.files : [];
+    const typedFiles = files.filter((file): file is { path: string; labels?: unknown[]; refs?: unknown[]; cites?: unknown[]; inputs?: unknown[] } => {
+      return typeof file === "object" && file !== null && typeof (file as { path?: unknown }).path === "string";
+    });
+
+    const unique = new Map<string, { path: string; score: number }>();
+    for (const file of typedFiles) {
+      if (!file.path.toLowerCase().endsWith(".tex")) {
+        continue;
+      }
+      const normalized = toPosix(file.path).toLowerCase();
+      if (/\/(?:dist|build|node_modules)\//.test(normalized)) {
+        continue;
+      }
+      const labels = Array.isArray(file.labels) ? file.labels.length : 0;
+      const refs = Array.isArray(file.refs) ? file.refs.length : 0;
+      const cites = Array.isArray(file.cites) ? file.cites.length : 0;
+      const inputs = Array.isArray(file.inputs) ? file.inputs.length : 0;
+      let score = labels * 2 + refs + cites + Math.min(inputs, 2);
+      if (/\/chapters?\//.test(normalized) || /\/body/.test(normalized) || /正文|章节/.test(file.path)) {
+        score += 12;
+      }
+      if (candidates.includes(file.path)) {
+        score += 2;
+      }
+      unique.set(path.resolve(file.path), { path: file.path, score });
+    }
+
+    if (unique.size === 0) {
+      return [this.pickRootTex(audit)];
+    }
+
+    return [...unique.values()].sort((a, b) => b.score - a.score || a.path.localeCompare(b.path)).map((item) => item.path);
   }
 
   private pickRootTex(audit: Record<string, unknown>): string {
@@ -325,12 +409,14 @@ export class TaskOrchestrator {
     findings: StoredFinding[] | undefined,
     segments: StoredSegment[],
     options: TaskOptions,
-  ): StoredSegment[] {
+  ): MatchedSegment[] {
+    const segmentLimit = options.maxSegments ?? Number.POSITIVE_INFINITY;
+
     if (!findings?.length) {
-      return segments.slice(0, options.maxSegments);
+      return Number.isFinite(segmentLimit) ? segments.slice(0, segmentLimit) : segments;
     }
 
-    const matches: Array<{ segment: StoredSegment; score: number; findingId: string }> = [];
+    const matches: Array<{ segment: StoredSegment; score: number; findingId: string; method: string; needsReview: boolean }> = [];
     const stmt = this.handle.sqlite.prepare(
       `INSERT INTO finding_matches
         (id, task_id, finding_id, segment_id, score, method, needs_review, created_at)
@@ -338,43 +424,100 @@ export class TaskOrchestrator {
     );
     const tx = this.handle.sqlite.transaction(() => {
       for (const finding of findings) {
-        const best = segments
-          .map((segment) => ({
-            segment,
-            score: similarity(finding.normalizedText, segment.normalizedText),
-          }))
-          .sort((a, b) => b.score - a.score)[0];
+        const match = this.findReportSegmentMatch(finding, segments);
 
-        if (best && best.score > 0.2) {
+        if (match) {
           stmt.run({
             id: createId("match"),
             taskId,
             findingId: finding.id,
-            segmentId: best.segment.id,
-            score: best.score,
-            method: best.score === 1 ? "normalized" : "ngram",
-            needsReview: best.score < 0.6 ? 1 : 0,
+            segmentId: match.segment.id,
+            score: match.score,
+            method: match.method,
+            needsReview: match.needsReview ? 1 : 0,
             createdAt: new Date().toISOString(),
           });
-          matches.push({ ...best, findingId: finding.id });
+          if (!match.needsReview) {
+            matches.push({ ...match, findingId: finding.id });
+          }
         }
       }
     });
     tx();
 
-    const unique = new Map<string, StoredSegment>();
+    const unique = new Map<string, MatchedSegment>();
     for (const match of matches.sort((a, b) => b.score - a.score)) {
-      unique.set(match.segment.id, match.segment);
-      if (unique.size >= options.maxSegments) {
+      if (!unique.has(match.segment.id)) {
+        unique.set(match.segment.id, {
+          ...match.segment,
+          findingId: match.findingId,
+          matchScore: match.score,
+          matchMethod: match.method,
+        });
+      }
+      if (unique.size >= segmentLimit) {
         break;
       }
     }
     return [...unique.values()];
   }
 
+  private findReportSegmentMatch(
+    finding: StoredFinding,
+    segments: StoredSegment[],
+  ): { segment: StoredSegment; score: number; method: string; needsReview: boolean } | undefined {
+    const normalizedFinding = finding.normalizedText;
+    if (!normalizedFinding) {
+      return undefined;
+    }
+
+    for (const length of prefixLengths(normalizedFinding.length)) {
+      const prefix = normalizedFinding.slice(0, length);
+      const prefixMatches = segments.filter((segment) => segment.normalizedText.includes(prefix));
+      if (prefixMatches.length === 1) {
+        return {
+          segment: prefixMatches[0],
+          score: Math.min(1, 0.72 + length / 400),
+          method: `prefix_${length}`,
+          needsReview: false,
+        };
+      }
+
+      if (prefixMatches.length > 1) {
+        const ranked = rankSegmentsBySimilarity(normalizedFinding, prefixMatches);
+        const best = ranked[0];
+        const second = ranked[1];
+        if (best && best.score >= 0.55 && (!second || best.score - second.score >= 0.08)) {
+          return {
+            segment: best.segment,
+            score: best.score,
+            method: `prefix_ranked_${length}`,
+            needsReview: false,
+          };
+        }
+      }
+    }
+
+    const ranked = rankSegmentsBySimilarity(normalizedFinding, segments);
+    const best = ranked[0];
+    const second = ranked[1];
+    if (!best || best.score < 0.35) {
+      return undefined;
+    }
+
+    const isDefinite = best.score >= 0.72 || !second || best.score - second.score >= 0.12;
+    return {
+      segment: best.segment,
+      score: best.score,
+      method: "ngram_fallback",
+      needsReview: !isDefinite,
+    };
+  }
+
   private insertRevision(
     taskId: string,
     segmentId: string,
+    findingId: string | undefined,
     originalText: string,
     decision: {
       action: "keep" | "revise" | "needs_review";
@@ -392,13 +535,14 @@ export class TaskOrchestrator {
         `INSERT INTO revisions
           (id, task_id, segment_id, finding_id, original_text, revised_text, revision_note,
            status, risk_flags_json, confidence, created_at, updated_at)
-          VALUES (@id, @taskId, @segmentId, NULL, @originalText, @revisedText, @revisionNote,
+          VALUES (@id, @taskId, @segmentId, @findingId, @originalText, @revisedText, @revisionNote,
            'draft', @riskFlagsJson, @confidence, @now, @now)`,
       )
       .run({
         id,
         taskId,
         segmentId,
+        findingId: findingId ?? null,
         originalText,
         revisedText: revisedText ?? null,
         revisionNote: decision.revisionNote,
@@ -431,6 +575,23 @@ export class TaskOrchestrator {
         createdAt: new Date().toISOString(),
       });
   }
+
+  private readMatchStats(taskId: string): { matchedFindings: number; needsReviewMatches: number } {
+    const row = this.handle.sqlite
+      .prepare(
+        `SELECT
+           COUNT(DISTINCT finding_id) AS matchedFindings,
+           SUM(CASE WHEN needs_review = 1 THEN 1 ELSE 0 END) AS needsReviewMatches
+         FROM finding_matches
+         WHERE task_id = ?`,
+      )
+      .get(taskId) as { matchedFindings: number; needsReviewMatches: number | null };
+
+    return {
+      matchedFindings: Number(row.matchedFindings),
+      needsReviewMatches: Number(row.needsReviewMatches ?? 0),
+    };
+  }
 }
 
 function similarity(a: string, b: string): number {
@@ -447,6 +608,23 @@ function similarity(a: string, b: string): number {
   }
   const hits = gramsA.filter((gram) => gramsB.has(gram)).length;
   return hits / Math.max(gramsA.length, gramsB.size);
+}
+
+function rankSegmentsBySimilarity(
+  normalizedFinding: string,
+  segments: StoredSegment[],
+): Array<{ segment: StoredSegment; score: number }> {
+  return segments
+    .map((segment) => ({
+      segment,
+      score: similarity(normalizedFinding, segment.normalizedText),
+    }))
+    .sort((a, b) => b.score - a.score);
+}
+
+function prefixLengths(length: number): number[] {
+  const candidates = [160, 120, 96, 72, 48, 36, 28, 20];
+  return candidates.filter((candidate) => candidate <= length);
 }
 
 function ngrams(value: string, size: number): string[] {

@@ -147,3 +147,23 @@
   - `npm run build`
   - `npm run frontend:build`
   - `npm run docs:build`
+- 根据用户对“全量处理风险段落”的反馈继续调整：
+  - `maxSegments` 改为可选成本保护，默认不限制，前端默认显示“全部风险段落”。
+  - PDF parser 不再把 findings 截断到 200 条。
+  - `TaskOrchestrator` 改为遍历项目审计结果里的全部 `.tex` 文件，为每个文件生成 revision packet，并统一写入 `latex_segments`。
+  - 报告匹配改为前缀递减全局定位：优先用 finding 的前 160/120/96/72/48/36/28/20 个规范化字符找唯一段落，多候选时再用 n-gram 排序。
+  - 低置信度匹配只记录为 `needs_review`，不直接送模型；确定命中的 segment 全部送 DeepSeek 或 mock LLM。
+  - 写回阶段改为按文件重新生成 apply packet，支持多文件任务。
+  - 新增 `tests/fixtures/global-search-project` 和回归测试，覆盖“报告命中定位到 `\input` 引入的章节文件后再改写”。
+- 本轮全量定位验证：
+  - 使用真实项目 `D:\Develop\Projects\down_ai\tests\WiSh-LaTeX`。
+  - 使用真实报告 `G:\Downloads\检测结果-WiSh：基于人工智能技术的操作系统交互.pdf`。
+  - 为避免一次性消耗 146 次真实模型调用，本次全量定位用 mock LLM 验证编排和匹配；真实 DeepSeek 调用链继续用 `npm run test:live` 覆盖。
+  - 结果：921 条 finding、163 个 LaTeX segment、501 条 finding match、146 个确定命中 segment、146 条 revision draft、0 条低置信度复核匹配。
+- 本轮验证通过：
+  - `npm run test`
+  - `npm run typecheck`
+  - `npm run frontend:build`
+  - `npm run build`
+  - `npm run docs:build`
+  - `npm run test:live`

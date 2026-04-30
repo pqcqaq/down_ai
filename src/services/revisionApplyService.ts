@@ -100,7 +100,7 @@ export class RevisionApplyService {
     const journal: ApplyJournalEntry[] = [];
 
     for (const [filePath, revisions] of byFile) {
-      const packetPath = await this.createApplyPacket(taskId, filePath, revisions);
+      const packetPath = await this.createApplyPacket(taskId, filePath, revisions, stepKey);
       const original = await fs.readFile(filePath, "utf8");
       const beforeHash = sha256(original);
       const backupPath = await this.createBackup(taskId, filePath, original);
@@ -187,9 +187,19 @@ export class RevisionApplyService {
     taskId: string,
     filePath: string,
     revisions: Array<RevisionRow & SegmentRow>,
+    stepKey?: TaskStepKey,
   ): Promise<string> {
-    const packetPath = path.join(this.artifactStore.getTaskArtifactDir(taskId), "revision-packet.json");
-    const packet = JSON.parse(await fs.readFile(packetPath, "utf8")) as {
+    const artifactBasename = `apply-source-${crypto
+      .createHash("sha1")
+      .update(path.resolve(filePath))
+      .digest("hex")
+      .slice(0, 10)}`;
+    const packet = (await this.skillRuntime.buildRevisionPack({
+      taskId,
+      texFile: filePath,
+      stepKey,
+      artifactBasename,
+    })) as {
       source_file: string;
       segments: Array<{ index: number; revised_text: string; revision_note: string }>;
     };
@@ -215,7 +225,7 @@ export class RevisionApplyService {
       };
     });
 
-    const outPath = path.join(this.artifactStore.getTaskArtifactDir(taskId), "revision-packet.apply.json");
+    const outPath = path.join(this.artifactStore.getTaskArtifactDir(taskId), `${artifactBasename}.apply.json`);
     await fs.writeFile(outPath, `${JSON.stringify(packet, null, 2)}\n`, "utf8");
     await this.artifactStore.recordFile({ taskId, kind: "apply_packet", filePath: outPath, mimeType: "application/json" });
     return outPath;

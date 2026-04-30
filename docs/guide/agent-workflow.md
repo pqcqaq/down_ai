@@ -9,14 +9,14 @@
 4. 写入数据库 `tasks`、`task_steps`、`task_events`
 5. 审计 LaTeX 项目
 6. 解析 PDF 报告
-7. 抽取可编辑 prose segment
-8. 匹配 PDF 命中内容与 LaTeX segment
+7. 全局抽取所有 `.tex` 文件中的可编辑 prose segment
+8. 用报告命中内容的稳定前缀在全项目定位 LaTeX 段落
 9. 中文/英文风格诊断
 10. 生成改写计划
 11. Agent 逐段生成 revised_text
 12. 运行 revision packet lint
 13. 人工确认或自动应用
-14. 写回 `.tex`
+14. 按文件写回 `.tex`
 15. 运行 protected token 检查
 16. 可选编译 LaTeX
 17. 生成统计报告
@@ -89,14 +89,14 @@ type ReportParser = {
 
 ## Segment 匹配
 
-匹配策略：
+匹配策略以报告为主导，不再只处理某个 root tex：
 
-- 精确包含匹配。
-- 规范化文本匹配。
-- n-gram 相似度。
-- 编辑距离。
-- 向量相似度扩展。
-- 同页码或章节线索加权。
+1. 审计项目后遍历所有 `.tex` 文件，跳过 `dist`、`build`、`node_modules` 等目录。
+2. 对每个文件生成 revision packet，并把所有 prose segment 写入 `latex_segments`。
+3. 对每条报告 finding 取规范化后的前缀，按 `160/120/96/72/48/36/28/20` 字符递减搜索。
+4. 若某个前缀只命中一个 segment，则认为定位确定。
+5. 若前缀命中多个候选，再用 n-gram 相似度排序；只有最佳候选明显领先时才进入改写。
+6. 兜底使用全局 n-gram 相似度，低置信度结果只写入 `finding_matches.needs_review=1`，不直接送模型。
 
 匹配结果：
 
@@ -105,12 +105,35 @@ type MatchCandidate = {
   findingId: string;
   segmentId: string;
   score: number;
-  method: "exact" | "normalized" | "ngram" | "edit_distance" | "embedding";
+  method: "prefix_160" | "prefix_ranked_72" | "ngram_fallback";
   needsReview: boolean;
 };
 ```
 
-低置信度匹配进入人工确认，不自动改写。
+默认处理所有确定命中的风险段落；前端的数量限制只是成本保护开关，不是主工作流的一部分。
+
+## Agent 前中后步骤
+
+前置阶段：
+
+- 校验输入和 SkillRuntime 可用性。
+- 审计 LaTeX 项目并记录所有候选文件。
+- 解析 PDF 报告并写入 `report_findings`。
+- 全局抽取 prose segment 并写入 `latex_segments`。
+- 根据报告前缀定位 segment，写入 `finding_matches`。
+
+中置阶段：
+
+- 对确定命中的 segment 调用 DeepSeek，要求结构化 JSON。
+- 模型只输出 `RevisionDecision`，不直接写文件。
+- 每次调用写入 `agent_runs`，修订草稿写入 `revisions`。
+
+后置阶段：
+
+- 校验 protected token、长度变化和风险标记。
+- 人工确认后按文件重新生成 apply packet。
+- 写回前运行 `lint_revision_packet.py`，写回后生成 diff、journal 和可回滚备份。
+- 统计报告记录 finding 数、确定命中数、需复核匹配数、实际改写数。
 
 ## 风格诊断
 

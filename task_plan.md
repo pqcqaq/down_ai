@@ -29,6 +29,7 @@
 | 13 | complete | 测试加固补充：真实 SkillRuntime 集成、危险写回拦截、live dry-run 数据库审计 |
 | 14 | complete | 前端可用性加固：目录浏览、报告解析反馈、最近任务、批量审核、浏览器端完整验证 |
 | 15 | complete | 前端降噪与真实 WiSh 验证：次级能力 modal 化、真实报告 live dry-run、正文文件选择修复 |
+| 16 | complete | 报告驱动全局定位：遍历全部 `.tex` 段落，用报告前缀确定命中后再交给 AI 改写 |
 
 ## 已知决策
 
@@ -45,3 +46,5 @@
 - Iteration 1 开始前已确认工作区干净；规划文档已提交为 `0ac545a docs: add agent development plan`。
 - Iteration 2 开始前已确认工作区干净；Iteration 1 已提交为 `611da45 feat: implement iteration 1 dry-run backend`。
 - Iteration 3 开始前已确认工作区干净；Iteration 2 已提交为 `2e8dfeb feat: add revision workbench and apply flow`。
+- 默认工作流应处理报告中所有确定命中的风险段落；数量上限只作为可选成本保护，不要求用户手工输入 20 条之类的限制。
+- 匹配策略改为全局搜索：先抽取项目内全部 `.tex` prose segment，再用报告 finding 的递减前缀定位唯一段落，最后才进入模型改写。

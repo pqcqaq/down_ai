@@ -116,16 +116,20 @@ export async function parseReport(fileId: string) {
   return request<ReportParseResult>(`/api/reports/${fileId}/parse`);
 }
 
-export async function createTask(input: { projectDir: string; reportFileId?: string; maxSegments: number }) {
+export async function createTask(input: { projectDir: string; reportFileId?: string; maxSegments?: number | null }) {
+  const options: { applyMode: "dry_run"; maxSegments?: number } = {
+    applyMode: "dry_run",
+  };
+  if (input.maxSegments != null) {
+    options.maxSegments = input.maxSegments;
+  }
+
   return request<{ task: Task }>("/api/tasks", {
     method: "POST",
     body: JSON.stringify({
       projectDir: input.projectDir,
       reportFileId: input.reportFileId,
-      options: {
-        applyMode: "dry_run",
-        maxSegments: input.maxSegments,
-      },
+      options,
     }),
   });
 }

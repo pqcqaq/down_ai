@@ -43,3 +43,5 @@
 - 用户反馈前端常驻目录树、历史和大段编辑区导致页面混乱；已将这些非基本流程能力迁移到 modal，只在主页面保留线性工作流。
 - 真实 WiSh 项目验证发现 root candidate 可能是只有 `\input` 的 wrapper，直接生成 revision pack 会得到 0 个 segment；已改为根据 labels/refs/cites、chapters/body 路径等正文信号选择修订源文件。
 - 真实 DeepSeek 响应可能把可选字段返回为 `null`，而不是省略字段；已在解析结构化输出前清理 `revisedText: null`。
+- 用户指出“输入前多少条”不是合理主流程；应从报告 finding 出发，在整个 LaTeX 项目中用稳定前缀直接定位原段落，定位确定后再交给 AI 改写。
+- 单 root 文件策略不足以覆盖多文件论文项目；后端需要遍历审计结果中的全部 `.tex` 文件并分别生成 revision packet，写回时也要按文件重新生成 apply packet。

@@ -64,9 +64,11 @@ export class SkillRuntime {
     taskId: string;
     texFile: string;
     stepKey?: TaskStepKey;
+    artifactBasename?: string;
   }): Promise<Record<string, unknown>> {
-    const jsonPath = path.join(this.artifactStore.getTaskArtifactDir(input.taskId), "revision-packet.json");
-    const markdownPath = path.join(this.artifactStore.getTaskArtifactDir(input.taskId), "revision-packet.md");
+    const basename = input.artifactBasename ?? "revision-packet";
+    const jsonPath = path.join(this.artifactStore.getTaskArtifactDir(input.taskId), `${basename}.json`);
+    const markdownPath = path.join(this.artifactStore.getTaskArtifactDir(input.taskId), `${basename}.md`);
     await fs.mkdir(path.dirname(jsonPath), { recursive: true });
     await this.runPython({
       taskId: input.taskId,

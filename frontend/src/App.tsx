@@ -47,7 +47,8 @@ type ModalName = "directory" | "settings" | "history" | "events" | "revision" | 
 
 export function App() {
   const [projectDir, setProjectDir] = useState("tests/fixtures/realistic-thesis");
-  const [maxSegments, setMaxSegments] = useState(3);
+  const [limitSegments, setLimitSegments] = useState(false);
+  const [maxSegments, setMaxSegments] = useState(20);
   const [workspace, setWorkspace] = useState<WorkspaceInfo | undefined>();
   const [browser, setBrowser] = useState<WorkspaceBrowseResult | undefined>();
   const [reportFileId, setReportFileId] = useState<string | undefined>();
@@ -144,7 +145,11 @@ export function App() {
     if (!inspected.exists) {
       throw new Error("项目目录不可用。");
     }
-    const created = await createTask({ projectDir: inspected.projectDir, reportFileId, maxSegments });
+    const created = await createTask({
+      projectDir: inspected.projectDir,
+      reportFileId,
+      maxSegments: limitSegments ? maxSegments : null,
+    });
     setTask(created.task);
     const started = await startTask(created.task.id);
     setTask(started.task);
@@ -268,7 +273,10 @@ export function App() {
           value={workspace ? `${workspace.texFiles} tex / ${workspace.rootCandidates.length} 主文件` : "未检查"}
         />
         <SummaryItem label="报告" value={reportName ? `${reportName}${reportFindingCount == null ? "" : ` / ${reportFindingCount} 条线索`}` : "未上传"} />
-        <SummaryItem label="任务" value={task ? `${task.id.slice(0, 12)} / ${progressPercent}%` : `最多 ${maxSegments} 段`} />
+        <SummaryItem
+          label="任务"
+          value={task ? `${task.id.slice(0, 12)} / ${progressPercent}%` : limitSegments ? `最多 ${maxSegments} 段` : "全部风险段落"}
+        />
         <SummaryItem label="修订" value={`${revisionStats.total} 条 / ${revisionStats.approved} 已确认 / ${revisionStats.applied} 已写回`} />
       </section>
 
@@ -436,18 +444,28 @@ export function App() {
 
       {modal === "settings" && (
         <Modal title="任务设置" onClose={() => setModal(null)}>
+          <label className="checkbox-line">
+            <input
+              data-testid="limit-segments-checkbox"
+              type="checkbox"
+              checked={limitSegments}
+              onChange={(event) => setLimitSegments(event.target.checked)}
+            />
+            限制处理数量
+          </label>
           <label>
-            最大处理段落
+            安全上限
             <input
               data-testid="max-segments-input"
               type="number"
               min={1}
-              max={20}
+              max={500}
+              disabled={!limitSegments}
               value={maxSegments}
-              onChange={(event) => setMaxSegments(Number(event.target.value))}
+              onChange={(event) => setMaxSegments(Math.max(1, Math.min(500, Number(event.target.value) || 1)))}
             />
           </label>
-          <p className="hint">默认只处理少量命中段落，后续可在这里扩展修订强度、语言和编译策略。</p>
+          <p className="hint">关闭限制时会处理报告匹配到的全部风险段落；开启后仅用于控制模型调用成本。</p>
         </Modal>
       )}
 
