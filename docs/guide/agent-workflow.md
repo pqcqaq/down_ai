@@ -263,3 +263,10 @@ type RevisionPlanItem = {
 ```
 
 前端 SSE 只负责实时推送。SSE 断线后，前端通过 `GET /api/tasks/:taskId/events?after=<sequence>` 从数据库补齐事件。
+
+当前实现采用后台任务 + 轮询：
+
+- `POST /api/tasks/:taskId/start` 只负责把任务放入后台执行，立即返回 `202` 和当前任务状态。
+- 前端每 1.2 秒轮询 `GET /api/tasks/:taskId`、`/steps`、`/events`、`/revisions`。
+- 主进度面板常驻显示当前阶段、阶段内进度和最近事件，用户不需要打开事件弹窗才能知道 Agent 正在工作。
+- 事件弹窗仍保留完整审计日志，供问题排查和复核使用。

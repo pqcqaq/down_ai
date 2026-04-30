@@ -76,6 +76,13 @@ export function App() {
     () => revisions.find((revision) => revision.id === selectedRevisionId),
     [revisions, selectedRevisionId],
   );
+  const taskIsActive = task?.state === "created" || task?.state === "running";
+  const currentStep = useMemo(
+    () => steps.find((step) => step.stepKey === task?.currentStep) ?? steps.find((step) => step.status === "running"),
+    [steps, task?.currentStep],
+  );
+  const recentEvents = useMemo(() => events.slice(-6), [events]);
+  const latestEvent = recentEvents[recentEvents.length - 1];
 
   const progressPercent = useMemo(() => {
     if (!task?.progressTotal) {
@@ -88,6 +95,18 @@ export function App() {
     void loadBrowser();
     void loadRecentTasks();
   }, []);
+
+  useEffect(() => {
+    if (!task?.id || !taskIsActive) {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      void refresh(task.id);
+    }, 1200);
+
+    return () => window.clearInterval(timer);
+  }, [task?.id, taskIsActive]);
 
   async function loadBrowser(dir?: string) {
     setBrowser(await browseWorkspaces(dir));
@@ -120,7 +139,7 @@ export function App() {
     setMessage(label);
     try {
       await fn();
-      setMessage(`${label}完成`);
+      setMessage((current) => (current === label ? `${label}完成` : current));
     } catch (error) {
       setMessage(error instanceof Error ? error.message : String(error));
     } finally {
@@ -154,6 +173,7 @@ export function App() {
     const started = await startTask(created.task.id);
     setTask(started.task);
     await refresh(created.task.id);
+    setMessage("任务已在后台启动，正在持续刷新进度");
   }
 
   async function loadTask(taskId: string) {
@@ -258,12 +278,12 @@ export function App() {
         <button
           data-testid="start-task-button"
           className="primary run-button"
-          disabled={busy}
+          disabled={busy || taskIsActive}
           type="button"
-          onClick={() => run("创建并启动 dry-run", startDryRun)}
+          onClick={() => run("启动后台任务", startDryRun)}
         >
-          {busy ? <Loader2 className="spin" size={16} /> : <Play size={16} />}
-          开始分析
+          {busy || taskIsActive ? <Loader2 className="spin" size={16} /> : <Play size={16} />}
+          {taskIsActive ? "执行中" : "开始分析"}
         </button>
       </section>
 
@@ -302,15 +322,34 @@ export function App() {
             <span style={{ width: `${progressPercent}%` }} />
           </div>
 
+          {task && (
+            <div className="live-status" data-active={taskIsActive ? "true" : "false"}>
+              <span className="live-dot" />
+              <strong>{taskIsActive ? "正在执行" : task.state}</strong>
+              <span>{currentStep ? `${currentStep.title}${formatStepProgress(currentStep)}` : latestEvent?.message ?? "等待任务事件"}</span>
+            </div>
+          )}
+
           <ol className="steps compact-steps">
             {steps.length === 0 && <li className="empty-step">任务启动后显示步骤。</li>}
             {steps.map((step) => (
               <li key={step.stepKey} data-status={step.status}>
                 <span>{step.title}</span>
-                <strong>{step.status}</strong>
+                <strong>{step.status}{formatStepProgress(step)}</strong>
               </li>
             ))}
           </ol>
+
+          <div className="event-feed">
+            <h3>实时事件</h3>
+            {recentEvents.length === 0 && <p className="empty">任务启动后显示执行事件。</p>}
+            {recentEvents.map((event) => (
+              <p key={event.id}>
+                <span>{event.sequence}</span>
+                {event.message}
+              </p>
+            ))}
+          </div>
         </section>
 
         <section className="panel review-panel">
@@ -628,4 +667,11 @@ function Modal({
 function preview(value: string): string {
   const compact = value.replace(/\s+/g, " ").trim();
   return compact.length > 140 ? `${compact.slice(0, 140)}...` : compact;
+}
+
+function formatStepProgress(step: TaskStep): string {
+  if (step.progressTotal <= 1) {
+    return "";
+  }
+  return ` ${step.progressCurrent}/${step.progressTotal}`;
 }

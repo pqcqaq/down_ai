@@ -281,6 +281,43 @@ textarea:focus {
   transition: width 180ms ease;
 }
 
+.live-status {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #dfe6ee;
+  border-radius: 6px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  margin-bottom: 14px;
+  min-height: 42px;
+  padding: 9px 11px;
+}
+
+.live-status strong {
+  font-size: 13px;
+}
+
+.live-status span:last-child {
+  color: #5d6876;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.live-dot {
+  background: #94a0ad;
+  border-radius: 50%;
+  height: 9px;
+  width: 9px;
+}
+
+.live-status[data-active="true"] .live-dot {
+  animation: pulse 1.2s ease-in-out infinite;
+  background: #1f7668;
+}
+
 .steps {
   display: grid;
   gap: 8px;
@@ -319,6 +356,30 @@ textarea:focus {
   color: #657180;
   font-size: 13px;
   line-height: 1.5;
+}
+
+.event-feed {
+  border-top: 1px solid #e3e8ef;
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 14px;
+}
+
+.event-feed h3 {
+  font-size: 13px;
+}
+
+.event-feed p {
+  color: #4e5967;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.event-feed p span {
+  color: #8c96a4;
+  display: inline-block;
+  width: 32px;
 }
 
 .revision-table {
@@ -511,6 +572,19 @@ footer {
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(31 118 104 / 0%);
+    transform: scale(1);
+  }
+
+  50% {
+    box-shadow: 0 0 0 5px rgb(31 118 104 / 12%);
+    transform: scale(1.08);
   }
 }
 

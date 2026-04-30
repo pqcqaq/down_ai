@@ -14,6 +14,7 @@ const handle = getDatabase();
 const progress = new TaskProgressService(handle);
 const orchestrator = new TaskOrchestrator(handle);
 const revisionApplyService = new RevisionApplyService(handle);
+const runningTaskIds = new Set<string>();
 
 tasksRouter.get("/", (req, res) => {
   const limit = Number(req.query.limit || 10);
@@ -38,11 +39,33 @@ tasksRouter.post("/", async (req, res, next) => {
   }
 });
 
-tasksRouter.post("/:taskId/start", async (req, res, next) => {
+tasksRouter.post("/:taskId/start", (req, res, next) => {
   try {
-    await orchestrator.runDryRun(req.params.taskId);
-    res.json({
-      task: progress.getTask(req.params.taskId),
+    const taskId = req.params.taskId;
+    const task = progress.getTask(taskId);
+    if (!task) {
+      res.status(404).json({ error: "Task not found." });
+      return;
+    }
+
+    if (!runningTaskIds.has(taskId) && !["running", "completed", "failed", "cancelled"].includes(task.state)) {
+      runningTaskIds.add(taskId);
+      void orchestrator
+        .runDryRun(taskId)
+        .catch((error) => {
+          const err = error instanceof Error ? error : new Error(String(error));
+          progress.insertEvent(taskId, {
+            type: "task_background_error",
+            message: err.message,
+          });
+        })
+        .finally(() => {
+          runningTaskIds.delete(taskId);
+        });
+    }
+
+    res.status(202).json({
+      task: progress.getTask(taskId),
     });
   } catch (error) {
     next(error);

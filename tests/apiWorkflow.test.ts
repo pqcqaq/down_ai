@@ -76,8 +76,11 @@ describe("realistic API workflow", () => {
     const recentTasks = await request(app).get("/api/tasks?limit=5").expect(200);
     expect(recentTasks.body.tasks.map((item: { id: string }) => item.id)).toContain(taskId);
 
-    const started = await request(app).post(`/api/tasks/${taskId}/start`).expect(200);
-    expect(started.body.task.state).toBe("completed");
+    const started = await request(app).post(`/api/tasks/${taskId}/start`).expect(202);
+    expect(["running", "completed"]).toContain(started.body.task.state);
+
+    const completed = await waitForTask(taskId);
+    expect(completed.state).toBe("completed");
 
     const steps = await request(app).get(`/api/tasks/${taskId}/steps`).expect(200);
     expect(steps.body.steps.every((step: { status: string }) => ["completed", "skipped"].includes(step.status))).toBe(
@@ -106,3 +109,18 @@ describe("realistic API workflow", () => {
     expect(fs.readFileSync(mainTex, "utf8")).toBe(before);
   });
 });
+
+async function waitForTask(taskId: string): Promise<{ state: string }> {
+  for (let attempt = 0; attempt < 60; attempt += 1) {
+    const response = await request(app).get(`/api/tasks/${taskId}`).expect(200);
+    const task = response.body.task as { state: string; errorMessage?: string };
+    if (task.state === "completed") {
+      return task;
+    }
+    if (task.state === "failed") {
+      throw new Error(task.errorMessage || "Task failed");
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  throw new Error(`Timed out waiting for task: ${taskId}`);
+}
