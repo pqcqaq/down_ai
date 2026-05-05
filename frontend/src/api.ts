@@ -67,6 +67,12 @@ export type ReportParseResult = {
   }>;
 };
 
+export type RuntimeInfo = {
+  llmMode: "deepseek_live" | "mock";
+  model: string;
+  hasDeepSeekApiKey: boolean;
+};
+
 const apiBaseUrl = (
   (import.meta as ImportMeta & { env?: { VITE_API_BASE_URL?: string } }).env?.VITE_API_BASE_URL || ""
 ).replace(/\/+$/, "");
@@ -114,6 +120,10 @@ export async function uploadReport(file: File) {
 
 export async function parseReport(fileId: string) {
   return request<ReportParseResult>(`/api/reports/${fileId}/parse`);
+}
+
+export async function getRuntimeInfo() {
+  return request<RuntimeInfo>("/api/runtime");
 }
 
 export async function createTask(input: { projectDir: string; reportFileId?: string }) {

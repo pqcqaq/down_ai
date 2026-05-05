@@ -23,6 +23,14 @@ export function createApp() {
     });
   });
 
+  app.get("/api/runtime", (_req, res) => {
+    res.json({
+      llmMode: env.useLiveLlm ? "deepseek_live" : "mock",
+      model: env.useLiveLlm ? env.deepseekModel : "mock",
+      hasDeepSeekApiKey: Boolean(env.deepseekApiKey),
+    });
+  });
+
   app.use("/api", generateRouter);
   app.use("/api/workspaces", workspacesRouter);
   app.use("/api/reports", reportsRouter);

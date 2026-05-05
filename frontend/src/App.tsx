@@ -23,6 +23,7 @@ import {
   editRevision,
   getEvents,
   getRevisions,
+  getRuntimeInfo,
   getSteps,
   getTask,
   inspectWorkspace,
@@ -37,6 +38,7 @@ import {
   type Task,
   type TaskEvent,
   type TaskStep,
+  type RuntimeInfo,
   type WorkspaceBrowseResult,
 } from "./api";
 
@@ -50,6 +52,7 @@ export function App() {
   const [reportFileId, setReportFileId] = useState<string | undefined>();
   const [reportName, setReportName] = useState("");
   const [reportFindingCount, setReportFindingCount] = useState<number | undefined>();
+  const [runtimeInfo, setRuntimeInfo] = useState<RuntimeInfo | undefined>();
   const [task, setTask] = useState<Task | undefined>();
   const [recentTasks, setRecentTasks] = useState<Task[]>([]);
   const [steps, setSteps] = useState<TaskStep[]>([]);
@@ -90,6 +93,7 @@ export function App() {
   useEffect(() => {
     void loadBrowser();
     void loadRecentTasks();
+    void loadRuntimeInfo();
   }, []);
 
   useEffect(() => {
@@ -111,6 +115,10 @@ export function App() {
   async function loadRecentTasks() {
     const result = await listTasks(8);
     setRecentTasks(result.tasks);
+  }
+
+  async function loadRuntimeInfo() {
+    setRuntimeInfo(await getRuntimeInfo());
   }
 
   async function refresh(taskId = task?.id) {
@@ -288,7 +296,7 @@ export function App() {
           label="任务"
           value={task ? `${task.id.slice(0, 12)} / ${progressPercent}%` : "全部报告命中段落"}
         />
-        <SummaryItem label="修订" value={`${revisionStats.total} 条 / ${revisionStats.approved} 已确认 / ${revisionStats.applied} 已写回`} />
+        <SummaryItem label="模型" value={runtimeInfo ? formatRuntime(runtimeInfo) : "读取中"} />
       </section>
 
       {message && <p className="message">{message}</p>}
@@ -638,4 +646,8 @@ function formatStepProgress(step: TaskStep): string {
     return "";
   }
   return ` ${step.progressCurrent}/${step.progressTotal}`;
+}
+
+function formatRuntime(runtime: RuntimeInfo): string {
+  return runtime.llmMode === "deepseek_live" ? `DeepSeek / ${runtime.model}` : "mock";
 }

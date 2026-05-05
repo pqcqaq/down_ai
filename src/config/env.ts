@@ -36,15 +36,28 @@ function readReasoningEffort(): "high" | "max" {
   return value;
 }
 
+function readUseLiveLlm(apiKey: string): boolean {
+  const value = process.env.USE_LIVE_LLM?.trim();
+  if (value === "true") {
+    return true;
+  }
+  if (value === "false") {
+    return false;
+  }
+  return Boolean(apiKey);
+}
+
+const deepseekApiKey = process.env.DEEPSEEK_API_KEY?.trim() || "";
+
 export const env = {
-  deepseekApiKey: process.env.DEEPSEEK_API_KEY?.trim() || "",
+  deepseekApiKey,
   deepseekModel: process.env.DEEPSEEK_MODEL?.trim() || "deepseek-v4-pro",
   deepseekBaseUrl: normalizeBaseUrl(
     process.env.DEEPSEEK_BASE_URL?.trim() || "https://api.deepseek.com",
   ),
   deepseekThinking: readThinkingMode(),
   deepseekReasoningEffort: readReasoningEffort(),
-  useLiveLlm: process.env.USE_LIVE_LLM?.trim() === "true",
+  useLiveLlm: readUseLiveLlm(deepseekApiKey),
   runLiveLlmTests: process.env.RUN_LIVE_LLM_TESTS?.trim() === "true",
   skillDir: process.env.BYPASS_AIGC_SKILL_DIR?.trim() || "../BypassAIGC-Skill",
   pythonBin: process.env.PYTHON_BIN?.trim() || "python",
